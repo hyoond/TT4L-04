@@ -1,0 +1,35 @@
+<html>
+    <style>
+        #Box{
+          text-align: center;
+          border: 1cm black;
+        }
+    </style>
+    <body>
+        <div id = "Box">
+            <table>
+                <form action="/login" method="POST">
+            <tr>
+                <td><h1>Login</h1></td>
+            </tr>
+
+            <tr>
+                <td><label for="name">First name:</label>
+                    <input type="text" name="username"></td>
+            </tr>
+
+            <tr>
+                <td><label for="password">Password:</label>
+                    <input type="password" name="password"></td>
+            </tr>
+
+            <tr>
+                <td><input type="submit"></td>
+            </tr>
+            </form>
+            </table>
+            <a href="{{ url_for('signup_form') }}">Go to Login</a>
+
+        </div>
+    </body>
+</html>
