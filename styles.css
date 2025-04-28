@@ -1,0 +1,35 @@
+form {
+    border: 3px solid #f1f1f1;
+  }
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+ }
+
+ input[type="text"],
+input[type="password"] {
+    padding: 8px;
+   
+}
+
+label {
+    display: block;
+    border-radius: 8px;
+    width: 300px;
+}
+ 
+
+
+
+.login-box {
+    background-color: white;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 300px;
+}
+
