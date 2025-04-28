@@ -1,29 +1,12 @@
-form {
-    border: 3px solid #f1f1f1;
-  }
-
 body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
- }
-
- input[type="text"],
-input[type="password"] {
-    padding: 8px;
-   
 }
-
-label {
-    display: block;
-    border-radius: 8px;
-    width: 300px;
-}
- 
-
-
 
 .login-box {
     background-color: white;
@@ -33,3 +16,18 @@ label {
     width: 300px;
 }
 
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    
+}
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    
+}
