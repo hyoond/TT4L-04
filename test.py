@@ -5,61 +5,61 @@ test = Flask(__name__)
 
 @test.route('/')
 def signup_form():
-    return render_template('usersignup.html')
+    return render_template('signup.html')
 
 @test.route('/signup', methods=['POST'])
 def signup():
-    username = request.form['username']
+    email = request.form['email']
     password = request.form['password']
 
-    insert_user(username, password)
-    return f"User {username} added successfully! Please <a href='/login'>login here</a>."
+    insert_user(email, password)
+    return f"User added successfully! Please <a href='/login'>login here</a>."
 
 @test.route('/login')
 def login_form():
-    return render_template('userlogin.html')
+    return render_template('login.html')
 
 @test.route('/login', methods=['POST'])
 def login():
-    username = request.form['username']
+    email = request.form['email']
     password = request.form['password']
 
-    user = compare_database(username, password)
+    user = compare_database(email, password)
 
     if user:
-        return f"Welcome, {username}!"
+        return f"Welcome!"
     else:
         return "User not found or Incorrect password."
 
-def compare_database(username, password):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-
-    cursor.execute('''
-    SELECT * FROM users WHERE name = ? AND password = ?
-    ''', (username, password))
-
-    user = cursor.fetchone()
-    conn.close()
-    return user
-
-def insert_user(username, password):
+def insert_user(email, password):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
     cursor.execute('''
        CREATE TABLE IF NOT EXISTS users (
            id INTEGER PRIMARY KEY AUTOINCREMENT,
-           name TEXT NOT NULL,
+           email TEXT NOT NULL,
            password TEXT NOT NULL
        )
     ''')
 
     cursor.execute('''
-    INSERT INTO users (name, password) VALUES (?, ?)
-    ''', (username, password))
+    INSERT INTO users (email, password) VALUES (?, ?)
+    ''', (email, password))
 
     conn.commit()
     conn.close()
+
+def compare_database(email, password):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+    SELECT * FROM users WHERE email = ? AND password = ?
+    ''', (email, password))
+
+    user = cursor.fetchone()
+    conn.close()
+    return user
 
 test.run(debug=True)
