@@ -1,8 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-import sqlite3, os
+from flask import Flask, render_template, request, session, redirect, url_for
+import sqlite3
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = 'supersecretkey123'
 
 @app.route('/')
 def home():
@@ -32,11 +32,9 @@ def login():
     user = compare_database(email, password)
 
     if user:
-        session['user_id'] = user[0]           
-        session['user_email'] = user[1]  
+        session['user_email'] = user[1] 
         return redirect(url_for('dashboard'))
-    else:
-        flash('Incorrect email or password.')
+    else:       
         return "User not found or Incorrect password."
 
 def compare_database(email, password):
@@ -72,14 +70,14 @@ def insert_user(email, password):
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user_id' not in session:
+    if 'user_email' not in session:
         return redirect(url_for('login'))
     return render_template('dashboard.html', user_email=session['user_email'])
 
 @app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
-    return redirect(url_for('login'))    
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
