@@ -12,13 +12,32 @@ def home():
 def signup_form():
     return render_template('signup.html')
 
+def valid_password(password):
+    if len(password) < 8:
+        return False,"Password must be at least 8 characters long.<a href='/signup'>Enter Again</a>"
+
+    if not (any(num in "0123456789" for num in password)):
+        return False,"Password must include at least one number.<a href='/signup'>Enter Again</a>"
+
+    if not (any(sym in "!@#$%^&*()_-+=<>:;?/,.{[]}" for sym in password)):
+        return False,"Password must include at least one symbol.<a href='/signup'>Enter Again</a>"
+    
+    return True,""
+
 @app.route('/signup', methods=['POST'])
 def signup():
     email = request.form['email']
     password = request.form['password']
 
-    insert_user(email, password)
-    return f"User {email} added successfully! Please <a href='/login'>login here</a>."
+    if not email.endswith("mmu.edu.my"):
+        return "Only MMU email are allowed for signup.<a href='/signup'>Enter Again</a>"
+    
+    if valid_password(password)[0] == False:
+        return valid_password(password)[1]
+
+    if email.endswith("mmu.edu.my") and valid_password(password):
+        insert_user(email, password)
+        return f"User {email} added successfully! Please <a href='/login'>login here</a>."
 
 @app.route('/login')
 def login_form():
