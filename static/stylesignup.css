@@ -12,8 +12,8 @@ body {
     background-color: rgb(255, 255, 255);
     padding: 40px 30px;
     border-radius: 12px;
-    width: 320px;
-    box-shadow: inset;
+    width: 340px;
+    box-shadow:inset;
 }
 
 h2 {
@@ -30,11 +30,12 @@ label {
     
 }
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="username"] {
     width: 100%;
     padding: 10px;
     border-radius: 6px;
-    margin-bottom: 15px;
+    margin-bottom: 3px;
     border:1px solid #ccc
     
 }
@@ -46,6 +47,10 @@ button {
     color: white;
     padding: 10px;
     border: 1.5px solid black;
+}
+
+button:hover {
+    background-color: #c06a3f;
 }
 
 a {

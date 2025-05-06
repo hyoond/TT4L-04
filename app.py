@@ -4,14 +4,14 @@ import os
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey123'  # Update to a secure secret key
+app.secret_key = 'supersecretkey123'  # Use a secure key in production
 
-# Upload config
+# Upload configuration
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Helper: File type check
+# Helper: File extension check
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -37,6 +37,7 @@ def signup_form():
 @app.route('/signup', methods=['POST'])
 def signup():
     email = request.form['email']
+    username = request.form['username']
     password = request.form['password']
 
     if not email.endswith("mmu.edu.my"):
@@ -46,10 +47,10 @@ def signup():
     if not is_valid:
         return message
 
-    insert_user(email, password)
-    return f"User {email} added successfully! Please <a href='/login'>login here</a>."
+    insert_user(email, username, password)
+    return f"User {username} added successfully! Please <a href='/login'>login here</a>."
 
-@app.route('/login')
+@app.route('/login', methods=['GET'])
 def login_form():
     return render_template('userlogin.html')
 
@@ -60,6 +61,7 @@ def login():
     user = compare_database(email, password)
 
     if user:
+        session['username'] = user[2]  # username from DB
         session['user_email'] = user[1]
         return redirect(url_for('dashboard'))
     else:
@@ -67,9 +69,9 @@ def login():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user_email' not in session:
+    if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html', user_email=session['user_email'])
+    return render_template('dashboard.html', username=session['username'])
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
@@ -89,35 +91,38 @@ def upload_timetable():
             return "No selected file"
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             return f"File uploaded successfully! Saved to: {filepath}"
+        else:
+            return "Invalid file type. Allowed types: pdf, jpg, jpeg, png."
 
     return render_template('upload.html')
 
 # Database helpers
-def compare_database(email, password):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE name = ? AND password = ?', (email, password))
-    user = cursor.fetchone()
-    conn.close()
-    return user
-
-def insert_user(email, password):
+def insert_user(email, username, password):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            username TEXT NOT NULL,
             password TEXT NOT NULL
         )
     ''')
-    cursor.execute('INSERT INTO users (name, password) VALUES (?, ?)', (email, password))
+    cursor.execute('INSERT INTO users (email, username, password) VALUES (?, ?, ?)', (email, username, password))
     conn.commit()
     conn.close()
+
+def compare_database(email, password):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password))
+    user = cursor.fetchone()
+    conn.close()
+    return user
 
 if __name__ == '__main__':
     app.run(debug=True)
