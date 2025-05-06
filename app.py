@@ -28,6 +28,7 @@ def valid_password(password):
 def signup():
     email = request.form['email']
     password = request.form['password']
+    username = request.form['username']
 
     if not email.endswith("mmu.edu.my"):
         return "Only MMU email are allowed for signup.<a href='/signup'>Enter Again</a>"
@@ -36,8 +37,8 @@ def signup():
         return valid_password(password)[1]
 
     if email.endswith("mmu.edu.my") and valid_password(password):
-        insert_user(email, password)
-        return f"User {email} added successfully! Please <a href='/login'>login here</a>."
+        insert_user(email, password, username)
+        return f"User {username} added successfully! Please <a href='/login'>login here</a>."
 
 @app.route('/login')
 def login_form():
@@ -51,7 +52,7 @@ def login():
     user = compare_database(email, password)
 
     if user:
-        session['user_email'] = user[1] 
+        session['username'] = user[2] 
         return redirect(url_for('dashboard'))
     else:       
         return "User not found or Incorrect password."
@@ -61,37 +62,38 @@ def compare_database(email, password):
     cursor = conn.cursor()
 
     cursor.execute('''
-    SELECT * FROM users WHERE name = ? AND password = ?
+    SELECT * FROM users WHERE email = ? AND password = ?
     ''', (email, password))
 
     user = cursor.fetchone()
     conn.close()
     return user
 
-def insert_user(email, password):
+def insert_user(email, password, username):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
     cursor.execute('''
        CREATE TABLE IF NOT EXISTS users (
            id INTEGER PRIMARY KEY AUTOINCREMENT,
-           name TEXT NOT NULL,
+           email TEXT NOT NULL,
+           username TEXT NOT NULL,
            password TEXT NOT NULL
        )
     ''')
 
     cursor.execute('''
-    INSERT INTO users (name, password) VALUES (?, ?)
-    ''', (email, password))
+    INSERT INTO users (email,username, password) VALUES (?, ?, ?)
+    ''', (email,username, password))
 
     conn.commit()
     conn.close()
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user_email' not in session:
+    if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html', user_email=session['user_email'])
+    return render_template('dashboard.html', username=session['username'])
 
 @app.route('/logout', methods=['POST'])
 def logout():
