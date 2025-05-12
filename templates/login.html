@@ -28,6 +28,11 @@
     <a href="{{ url_for('signup_form') }}">Register Here</a>
     </div>
   </form>
+  {% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+    {% endif %}
 </body>
 
 </html>

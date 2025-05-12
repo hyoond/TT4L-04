@@ -15,5 +15,10 @@
         <br>
         <a href="/dashboard">Back to Dashboard</a>
     </div>
+    {% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+    {% endif %}
 </body>
 </html>
