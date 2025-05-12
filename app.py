@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, make_response
 import sqlite3
 import os
 from werkzeug.utils import secure_filename
@@ -6,7 +6,6 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'  # Update to a secure secret key
 
-# Upload config
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -18,17 +17,18 @@ def allowed_file(filename):
 # Helper: Password validation
 def valid_password(password):
     if len(password) < 8:
-        return False, "Password must be at least 8 characters long.<a href='/signup'>Enter Again</a>"
+        return False, "Password must be at least 8 characters long."
     if not any(char.isdigit() for char in password):
-        return False, "Password must include at least one number.<a href='/signup'>Enter Again</a>"
+        return False, "Password must include at least one number."
     if not any(char in "!@#$%^&*()_-+=<>:;?/,.{[]}" for char in password):
-        return False, "Password must include at least one symbol.<a href='/signup'>Enter Again</a>"
+        return False, "Password must include at least one symbol."
     return True, ""
 
 # Routes
 @app.route('/')
 def home():
-    return render_template('home.html')
+    alert = session.pop("alert", None)
+    return render_template('home.html', alert=alert)
 
 @app.route('/signup', methods=['GET'])
 def signup_form():
@@ -41,18 +41,20 @@ def signup():
     username = request.form['username']
 
     if not email.endswith("mmu.edu.my"):
-        return "Only MMU email addresses are allowed.<a href='/signup'>Enter Again</a>"
+        return render_template ("signup.html", alert="Only MMU email addresses are allowed.")
 
-    is_valid, message = valid_password(password)
+    is_valid, alert = valid_password(password)
     if not is_valid:
-        return message
+        return render_template ("signup.html", alert = alert)
 
     insert_user(email, password,username)
-    return f"User {username} added successfully! Please <a href='/login'>login here</a>."
+    alert = f"User {username} added successfully!"
+    return render_template("login.html", alert = alert)
 
 @app.route('/login')
 def login_form():
-    return render_template('userlogin.html')
+    alert = session.pop('alert', None)
+    return render_template('login.html', alert = alert)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -62,47 +64,52 @@ def login():
 
     if user:
         session['username'] = user[2]
+        session['alert'] = "Login successfully"
         return redirect(url_for('dashboard'))
     else:
-        return "User not found or incorrect password."
+        return render_template("login.html", alert = "User not found or incorrect password")
 
 @app.route('/dashboard')
 def dashboard():
+    alert = session.pop('alert', None)
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html', user_email=session['username'])
+    return render_template('dashboard.html', username=session['username'], alert=alert)
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
     session.clear()
+    session['alert'] = "Logout successfully"
     return redirect(url_for('home'))
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_timetable():
     if 'username' not in session:
-        print("User not logged in")
+        session['alert'] = "Please login first"
         return redirect(url_for('login'))
 
+    alert = None
+
     if request.method == 'POST':
-        print("POST request received")
         if 'file' not in request.files:
-            return "No file part in request"
-        file = request.files['file']
-        if file.filename == '':
-            return "No selected file"
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            file.save(filepath)
-            print(f"File saved to {filepath}")
-            return f"File uploaded successfully! Saved to: {filepath}"
+            alert = "No file part in request"
         else:
-            return "File type not allowed."
-    return render_template('upload.html')
+            file = request.files['file']
+            if file.filename == '':
+                alert = "No selected file"
+            elif file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                file.save(filepath)
+                alert = f"File uploaded successfully! Saved to: {filepath}"
+            else:
+                alert = "File type not allowed."
+
+    return render_template('upload.html', alert=alert)
 
 
-# Database helpers
+
 def compare_database(email, password):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
