@@ -6,10 +6,15 @@
 </head>
 <body>
     <div class="container">
-        <h2>Welcome, {{ user_email }}!</h2>
+        <h2>Welcome, {{ username }}!</h2>
         <p>This is your dashboard.</p>
         <a href="/upload" class="btn">Upload Timetable</a>
         <a href="/logout" class="btn">Logout</a>
     </div>
+    {% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+    {% endif %}
 </body>
 </html>
