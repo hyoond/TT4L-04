@@ -80,11 +80,13 @@ def logout():
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_timetable():
     if 'username' not in session:
+        print("User not logged in")
         return redirect(url_for('login'))
 
     if request.method == 'POST':
+        print("POST request received")
         if 'file' not in request.files:
-            return "No file part"
+            return "No file part in request"
         file = request.files['file']
         if file.filename == '':
             return "No selected file"
@@ -93,9 +95,12 @@ def upload_timetable():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
             file.save(filepath)
+            print(f"File saved to {filepath}")
             return f"File uploaded successfully! Saved to: {filepath}"
-
+        else:
+            return "File type not allowed."
     return render_template('upload.html')
+
 
 # Database helpers
 def compare_database(email, password):
