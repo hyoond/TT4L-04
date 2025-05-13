@@ -20,12 +20,18 @@
      <label for="Email">Email:</label>
 <input type="email" id="first" name="email" 
     placeholder="Enter your Email" required>
+    <p class="tip">* Only MMU email allowed</p>
       </div>
     <br>
     <div class="input">
 <label for="password">Password:</label>
 <input type="password" id="password" name="password" 
     placeholder="Enter your Password" required>
+    <ul class="tip-list">
+                <li>Password must be at least 8 characters</li>
+                <li>Must include at least 1 number</li>
+                <li>Must include at least 1 symbol (e.g., !@#$)</li>
+            </ul>
      </div>
      <br>
     <button type="submit"> Submit </button>
