@@ -1,19 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 import os
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'  # Use a secure key in production
-
-# Upload configuration
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Helper: File extension check
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Helper: Password validation
 def valid_password(password):
@@ -71,34 +61,43 @@ def login():
 def dashboard():
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html', username=session['username'])
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT subject, day, start_time, end_time, location FROM timetable WHERE user_email = ?', (session['user_email'],))
+    timetable_data = cursor.fetchall()
+    conn.close()
+
+    return render_template('dashboard.html', username=session['username'], timetable=timetable_data)
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
     session.clear()
     return redirect(url_for('home'))
 
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_timetable():
+@app.route('/timetable', methods=['GET', 'POST'])
+def timetable():
     if 'user_email' not in session:
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        if 'file' not in request.files:
-            return "No file part"
-        file = request.files['file']
-        if file.filename == '':
-            return "No selected file"
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            return f"File uploaded successfully! Saved to: {filepath}"
-        else:
-            return "Invalid file type. Allowed types: pdf, jpg, jpeg, png."
+        subject = request.form['subject']
+        day = request.form['day']
+        start_time = request.form['start_time']
+        end_time = request.form['end_time']
+        location = request.form['location']
 
-    return render_template('upload.html')
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO timetable (user_email, subject, day, start_time, end_time, location)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (session['user_email'], subject, day, start_time, end_time, location))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('dashboard'))
+
+    return render_template('timetable.html')
 
 # Database helpers
 def insert_user(email, username, password):
@@ -110,6 +109,17 @@ def insert_user(email, username, password):
             email TEXT NOT NULL,
             username TEXT NOT NULL,
             password TEXT NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS timetable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT NOT NULL
         )
     ''')
     cursor.execute('INSERT INTO users (email, username, password) VALUES (?, ?, ?)', (email, username, password))
@@ -126,3 +136,4 @@ def compare_database(email, password):
 
 if __name__ == '__main__':
     app.run(debug=True)
+    

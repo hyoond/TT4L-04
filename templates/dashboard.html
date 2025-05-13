@@ -3,13 +3,60 @@
 <head>
     <title>Dashboard - TimelySync</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        .actions {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h2>Welcome, {{ user_email }}!</h2>
+        <h2>Welcome, {{ username }}!</h2>
         <p>This is your dashboard.</p>
-        <a href="/upload" class="btn">Upload Timetable</a>
-        <a href="/logout" class="btn">Logout</a>
+
+        {% if timetable %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Day</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in timetable %}
+                    <tr>
+                        <td>{{ entry[0] }}</td>
+                        <td>{{ entry[1] }}</td>
+                        <td>{{ entry[2] }}</td>
+                        <td>{{ entry[3] }}</td>
+                        <td>{{ entry[4] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>You haven't added any timetable entries yet.</p>
+        {% endif %}
+
+        <div class="actions">
+            <a href="{{ url_for('timetable') }}" class="btn">Add Timetable Entry</a>
+            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+        </div>
     </div>
 </body>
 </html>
