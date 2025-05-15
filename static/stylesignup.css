@@ -27,8 +27,8 @@ label {
     margin-bottom: 6px;
     font-size: 14px;
     color: #333;
+    
 }
-
 input[type="email"],
 input[type="password"],
 input[type="username"] {
@@ -36,7 +36,8 @@ input[type="username"] {
     padding: 10px;
     border-radius: 6px;
     margin-bottom: 3px;
-    border: 1px solid #ccc;
+    border:1px solid #ccc
+    
 }
 
 button {
@@ -55,7 +56,6 @@ a {
     text-align: center;
 }
 
-/* ✅ New: Tips for form fields */
 .tip {
     font-size: 12px;
     color: #555;
