@@ -71,7 +71,7 @@ def login():
         if user[4] == 'admin':
             return redirect(url_for('admin_dashboard'))
         else:
-          return redirect(url_for('dashboard'))
+            return redirect(url_for('dashboard'))
     else:
         return render_template("login.html", alert = "User not found or incorrect password")
 
@@ -123,6 +123,20 @@ def timetable():
 
     return render_template('timetable.html')
 
+@app.route('/admin')
+def admin_dashboard():
+    if 'role' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, email FROM users WHERE role = "user"')
+    users = cursor.fetchall()
+    conn.close()
+
+    return render_template('admin_dashboard.html', users=users)
+
+
 def compare_database(email, password):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -130,17 +144,6 @@ def compare_database(email, password):
     user = cursor.fetchone()
     conn.close()
     return user
-
-def ensure_users_table_has_role_column():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            raise
-    conn.commit()
-    conn.close()
 
 def insert_user(email, password, username, role='user'):
     conn = sqlite3.connect('database.db')
@@ -172,6 +175,5 @@ def insert_user(email, password, username, role='user'):
     conn.close()
 
 if __name__ == '__main__':
-     ensure_users_table_has_role_column()
-     insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
-     app.run(debug=True)
+    insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
+    app.run(debug=True)
