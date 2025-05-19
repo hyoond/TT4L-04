@@ -2,26 +2,16 @@
 <html lang="en">
 <head>
     <title>Dashboard - TimelySync</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
-        }
-        th, td {
-            padding: 10px;
-            text-align: center;
-        }
-        .actions {
-            margin-top: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
 </head>
 <body>
+    <div class="top-bar">
+        <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+        <div class="top-bar-right">
+            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+        </div>
+    </div>
+
     <div class="container">
         <h2>Welcome, {{ username }}!</h2>
         <p>This is your dashboard.</p>
@@ -50,14 +40,10 @@
                 </tbody>
             </table>
         {% else %}
-            <p>You haven't added any timetable entries yet.</p>
+                <p>You haven't added any timetable entries yet.</p>
         {% endif %}
-
-        <div class="actions">
-            <a href="{{ url_for('timetable') }}" class="btn">Add Timetable Entry</a>
-            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
-        </div>
     </div>
+
     {% if alert %}
         <script>
             alert("{{ alert }}");
