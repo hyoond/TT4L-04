@@ -12,20 +12,26 @@
         <h2>SignUp</h2>
         <div class="input">
           <label for="username">Username:</label>
-          <input type="username" id="username" name="username" 
-              placeholder="Enter your Username" required>
-                </div>
-              <br>
-             <div class="input">
-          <label for="email">Email:</label>
+     <input type="username" id="username" name="username" 
+         placeholder="Enter your Username" required>
+           </div>
+         <br>
+        <div class="input">
+     <label for="Email">Email:</label>
 <input type="email" id="first" name="email" 
     placeholder="Enter your Email" required>
+    <p class="tip">* Only MMU email allowed</p>
       </div>
     <br>
     <div class="input">
 <label for="password">Password:</label>
 <input type="password" id="password" name="password" 
     placeholder="Enter your Password" required>
+    <ul class="tip-list">
+                <li>Password must be at least 8 characters</li>
+                <li>Must include at least 1 number</li>
+                <li>Must include at least 1 symbol (e.g., !@#$)</li>
+            </ul>
      </div>
      <br>
     <button type="submit"> Submit </button>
@@ -34,6 +40,11 @@
     <a href="{{ url_for('login_form') }}">Login Here</a>
     </div>
   </form>
+  {% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+    {% endif %}
 </body>
 
 </html>

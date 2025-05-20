@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Upload Timetable</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Upload Your Timetable</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <br><br>
+            <button type="submit">Upload</button>
+        </form>
+        <br>
+        <a href="/dashboard">Back to Dashboard</a>
+    </div>
+    {% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+    {% endif %}
+</body>
+</html>
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_timetable():
+    if 'username' not in session:
+        session['alert'] = "Please login first"
+        return redirect(url_for('login'))
+
+    alert = None
+
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            alert = "No file part in request"
+        else:
+            file = request.files['file']
+            if file.filename == '':
+                alert = "No selected file"
+            elif file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                file.save(filepath)
+                alert = f"File uploaded successfully! Saved to: {filepath}"
+            else:
+                alert = "File type not allowed."
+
+    return render_template('upload.html', alert=alert)
