@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="top-left">
+            <h2>Welcome, {{ username }}</h2>
+        </div>
+        <div class="top-right">
+            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
+            <form action="{{ url_for('logout') }}" method="post">
+                <button class="btn" type="submit">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    {% if alert %}
+        <p style="color: green;">{{ alert }}</p>
+    {% endif %}
+
+    <div class="container">
+        <h2>Your Timetable</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Day</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in timetable %}
+                    <tr>
+                        <td>{{ entry[0] }}</td>
+                        <td>{{ entry[1] }}</td>
+                        <td>{{ entry[2] }}</td>
+                        <td>{{ entry[3] }}</td>
+                        <td>{{ entry[4] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="actions">
+            <a href="{{ url_for('timetable') }}" class="btn">Add Entry</a>
+        </div>
+    </div>
+
+</body>
+</html>
