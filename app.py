@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, session, make_response
 import sqlite3
 import os
+import calendar
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'  # Update to a secure secret key
@@ -153,6 +155,23 @@ def insert_user(email, password, username):
     cursor.execute('INSERT INTO users (email, username, password) VALUES (?, ?, ?)', (email, username, password))
     conn.commit()
     conn.close()
+
+@app.route('/calander_index', methods=['GET', 'POST'])
+def calander_index():
+    now = datetime.now()
+    year = now.year
+    month = now.month
+    day = now.day
+
+    if request.method == 'POST':
+        year = int(request.form.get('year'))
+        month = int(request.form.get('month'))
+
+
+    cal = calendar.HTMLCalendar(firstweekday=6)  
+    calendar_html = cal.formatmonth(year, month)
+
+    return render_template('calendar.html', calendar=calendar_html, year=year, month=month)
 
 if __name__ == '__main__':
     app.run(debug=True)
