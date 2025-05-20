@@ -66,8 +66,13 @@ def login():
     if user:
         session['username'] = user[2]
         session['email'] = user[1]
+        session['role'] = user[4]
         session['alert'] = "Login successfully"
-        return redirect(url_for('dashboard'))
+
+        if user[4] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        else:
+            return redirect(url_for('dashboard'))
     else:
         return render_template("login.html", alert="User not found or incorrect password")
 
@@ -175,6 +180,19 @@ def settings():
 
     return render_template('settings.html', settings=settings_data)
 
+@app.route('/admin')
+def admin_dashboard():
+    if 'role' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, email FROM users WHERE role = "user"')
+    users = cursor.fetchall()
+    conn.close()
+
+    return render_template('admin_dashboard.html', users=users)
+
 # Helper functions
 def compare_database(email, password):
     conn = sqlite3.connect('database.db')
@@ -184,19 +202,20 @@ def compare_database(email, password):
     conn.close()
     return user
 
-def insert_user(email, password, username):
+def insert_user(email, password, username, role='user'):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
+    # Create tables if not exists
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
             username TEXT NOT NULL,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'user'
         )
     ''')
-
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS timetable (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -208,7 +227,6 @@ def insert_user(email, password, username):
             location TEXT NOT NULL
         )
     ''')
-
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (
             email TEXT PRIMARY KEY,
@@ -216,10 +234,16 @@ def insert_user(email, password, username):
         )
     ''')
 
-    cursor.execute('INSERT INTO users (email, username, password) VALUES (?, ?, ?)', (email, username, password))
-    cursor.execute('INSERT INTO settings (email) VALUES (?)', (email,))
-    conn.commit()
+    # Insert user if not exists
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+    if cursor.fetchone() is None:
+        cursor.execute('INSERT INTO users (email, username, password, role) VALUES (?, ?, ?, ?)', (email, username, password, role))
+        cursor.execute('INSERT OR IGNORE INTO settings (email) VALUES (?)', (email,))
+        conn.commit()
+
     conn.close()
 
 if __name__ == '__main__':
+    # Insert admin user only if not exists
+    insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
     app.run(debug=True)
