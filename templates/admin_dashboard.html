@@ -2,113 +2,110 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard - TimelySync</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin_dashboard.css') }}">
 </head>
 <body>
+
     <div class="top-bar">
         <div class="top-left">
-            <h2>Admin Dashboard</h2>
+            <h2>Welcome, {{ session['username'] }}</h2>
         </div>
         <div class="top-right">
-            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
+            <form action="{{ url_for('logout') }}" method="post">
+                <button class="btn" type="submit">Logout</button>
+            </form>
         </div>
     </div>
 
+    {% if alert %}
+        <p class="alert">{{ alert }}</p>
+    {% endif %}
+
     <div class="container">
-        <h2>Create Subject & Timetable Slots</h2>
-        <form method="POST" action="{{ url_for('create_subject') }}">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="subject_name">Subject Name</label>
-                    <input type="text" name="subject_name" id="subject_name" required>
-                </div>
 
-                <div class="form-group">
-                    <label for="group">Group Name</label>
-                    <input type="text" name="group" id="group" placeholder="e.g. Group A, B1, TUT02" required>
-                </div>
+        <!-- Registered Users Section -->
+        <details>
+            <summary>All Registered Users</summary>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user[0] }}</td>
+                        <td>{{ user[1] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </details>
 
-                <!-- Time Slot 1 -->
-                <div class="form-group">
-                    <label for="day1">Day 1</label>
-                    <select name="day1" id="day1" required>
-                        <option value="">-- Select Day --</option>
-                        <option value="Monday">Monday</option>
-                        <option value="Tuesday">Tuesday</option>
-                        <option value="Wednesday">Wednesday</option>
-                        <option value="Thursday">Thursday</option>
-                        <option value="Friday">Friday</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="start_time1">Start Time 1</label>
-                    <input type="time" name="start_time1" id="start_time1" required>
-                </div>
-                <div class="form-group">
-                    <label for="end_time1">End Time 1</label>
-                    <input type="time" name="end_time1" id="end_time1" required>
-                </div>
-                <div class="form-group">
-                    <label for="location1">Location 1</label>
-                    <input type="text" name="location1" id="location1" required>
-                </div>
-
-                <!-- Time Slot 2 -->
-                <div class="form-group">
-                    <label for="day2">Day 2</label>
-                    <select name="day2" id="day2">
-                        <option value="">-- Select Day --</option>
-                        <option value="Monday">Monday</option>
-                        <option value="Tuesday">Tuesday</option>
-                        <option value="Wednesday">Wednesday</option>
-                        <option value="Thursday">Thursday</option>
-                        <option value="Friday">Friday</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="start_time2">Start Time 2</label>
-                    <input type="time" name="start_time2" id="start_time2">
-                </div>
-                <div class="form-group">
-                    <label for="end_time2">End Time 2</label>
-                    <input type="time" name="end_time2" id="end_time2">
-                </div>
-                <div class="form-group">
-                    <label for="location2">Location 2</label>
-                    <input type="text" name="location2" id="location2">
-                </div>
-
-                <!-- Time Slot 3 -->
-                <div class="form-group">
-                    <label for="day3">Day 3</label>
-                    <select name="day3" id="day3">
-                        <option value="">-- Select Day --</option>
-                        <option value="Monday">Monday</option>
-                        <option value="Tuesday">Tuesday</option>
-                        <option value="Wednesday">Wednesday</option>
-                        <option value="Thursday">Thursday</option>
-                        <option value="Friday">Friday</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="start_time3">Start Time 3</label>
-                    <input type="time" name="start_time3" id="start_time3">
-                </div>
-                <div class="form-group">
-                    <label for="end_time3">End Time 3</label>
-                    <input type="time" name="end_time3" id="end_time3">
-                </div>
-                <div class="form-group">
-                    <label for="location3">Location 3</label>
-                    <input type="text" name="location3" id="location3">
-                </div>
+        <!-- Create Course Section -->
+        <h2>Create Course</h2>
+        <form method="POST" action="{{ url_for('create_subject') }}" class="form-grid">
+            <div class="form-group">
+                <label for="subject_name">Course Name</label>
+                <input type="text" id="subject_name" name="subject_name" required>
             </div>
-
+            <div class="form-group">
+                <label for="day">Day</label>
+                <select id="day" name="day" required>
+                    <option value="" disabled selected>Select a day</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="start_time">Start Time</label>
+                <input type="time" id="start_time" name="start_time" required>
+            </div>
+            <div class="form-group">
+                <label for="end_time">End Time</label>
+                <input type="time" id="end_time" name="end_time" required>
+            </div>
+            <div class="form-group">
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location" required>
+            </div>
             <div class="form-actions">
-                <button type="submit" class="btn">Create Subject & Slots</button>
+                <button type="submit" class="btn">Add Course</button>
             </div>
         </form>
-    </div>
-</body>
-</html>
+
+        <!-- Existing Courses Section -->
+        {% if courses %}
+<details>
+    <summary>Existing Courses</summary>
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Day</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Location</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for course in courses %}
+            <tr>
+                <td>{{ course[1] }}</td>
+                <td>{{ course[2] }}</td>
+                <td>{{ course[3] }}</td>
+                <td>{{ course[4] }}</td>
+                <td>{{ course[5] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</details>
+{% endif %}

@@ -187,11 +187,64 @@ def admin_dashboard():
 
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
+
     cursor.execute('SELECT username, email FROM users WHERE role = "user"')
     users = cursor.fetchall()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT NOT NULL
+        )
+    ''')
+    cursor.execute('SELECT * FROM courses')
+    courses = cursor.fetchall()
+
+    conn.close()
+    return render_template('admin_dashboard.html', users=users, courses=courses)
+
+
+@app.route('/create_subject', methods=['POST'])
+def create_subject():
+    if 'role' not in session or session['role'] != 'admin':
+        session['alert'] = "Unauthorized access"
+        return redirect(url_for('login'))
+
+    subject = request.form['subject_name']
+    day = request.form['day']
+    start_time = request.form['start_time']
+    end_time = request.form['end_time']
+    location = request.form['location']
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    # Create table if it doesn't exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT NOT NULL
+        )
+    ''')
+
+    cursor.execute('''
+        INSERT INTO courses (subject, day, start_time, end_time, location)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (subject, day, start_time, end_time, location))
+    conn.commit()
     conn.close()
 
-    return render_template('admin_dashboard.html', users=users)
+    session['alert'] = "Course added successfully"
+    return redirect(url_for('admin_dashboard'))
+
 
 # Helper functions
 def compare_database(email, password):
