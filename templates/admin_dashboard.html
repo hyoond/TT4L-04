@@ -1,70 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Dashboard - TimelySync</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
-        }
-        th, td {
-            padding: 10px;
-            text-align: center;
-        }
-        .actions {
-            margin-top: 20px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - TimelySync</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
 </head>
 <body>
-    <div class="logout">
-        <a href="{{ url_for('logout') }}" class="btn">Logout</a>
-    </div>
-    
-    <div class="container">
-        <h2>Welcome, {{ username }}!</h2>
-        <p>This is your dashboard.</p>
-
-        {% if timetable %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Subject</th>
-                        <th>Day</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                        <th>Location</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in timetable %}
-                    <tr>
-                        <td>{{ entry[0] }}</td>
-                        <td>{{ entry[1] }}</td>
-                        <td>{{ entry[2] }}</td>
-                        <td>{{ entry[3] }}</td>
-                        <td>{{ entry[4] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>You haven't added any timetable entries yet.</p>
-        {% endif %}
-
-        <div class="actions">
-            <a href="{{ url_for('timetable') }}" class="btn">Add Timetable Entry</a>
+    <div class="top-bar">
+        <div class="top-left">
+            <h2>Admin Dashboard</h2>
+        </div>
+        <div class="top-right">
+            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
         </div>
     </div>
-    {% if alert %}
-        <script>
-            alert("{{ alert }}");
-        </script>
-    {% endif %}
+
+    <div class="container">
+        <h2>Create Subject & Timetable Slots</h2>
+        <form method="POST" action="{{ url_for('create_subject') }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="subject_name">Subject Name</label>
+                    <input type="text" name="subject_name" id="subject_name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="group">Group Name</label>
+                    <input type="text" name="group" id="group" placeholder="e.g. Group A, B1, TUT02" required>
+                </div>
+
+                <!-- Time Slot 1 -->
+                <div class="form-group">
+                    <label for="day1">Day 1</label>
+                    <select name="day1" id="day1" required>
+                        <option value="">-- Select Day --</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="start_time1">Start Time 1</label>
+                    <input type="time" name="start_time1" id="start_time1" required>
+                </div>
+                <div class="form-group">
+                    <label for="end_time1">End Time 1</label>
+                    <input type="time" name="end_time1" id="end_time1" required>
+                </div>
+                <div class="form-group">
+                    <label for="location1">Location 1</label>
+                    <input type="text" name="location1" id="location1" required>
+                </div>
+
+                <!-- Time Slot 2 -->
+                <div class="form-group">
+                    <label for="day2">Day 2</label>
+                    <select name="day2" id="day2">
+                        <option value="">-- Select Day --</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="start_time2">Start Time 2</label>
+                    <input type="time" name="start_time2" id="start_time2">
+                </div>
+                <div class="form-group">
+                    <label for="end_time2">End Time 2</label>
+                    <input type="time" name="end_time2" id="end_time2">
+                </div>
+                <div class="form-group">
+                    <label for="location2">Location 2</label>
+                    <input type="text" name="location2" id="location2">
+                </div>
+
+                <!-- Time Slot 3 -->
+                <div class="form-group">
+                    <label for="day3">Day 3</label>
+                    <select name="day3" id="day3">
+                        <option value="">-- Select Day --</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="start_time3">Start Time 3</label>
+                    <input type="time" name="start_time3" id="start_time3">
+                </div>
+                <div class="form-group">
+                    <label for="end_time3">End Time 3</label>
+                    <input type="time" name="end_time3" id="end_time3">
+                </div>
+                <div class="form-group">
+                    <label for="location3">Location 3</label>
+                    <input type="text" name="location3" id="location3">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Create Subject & Slots</button>
+            </div>
+        </form>
+    </div>
 </body>
 </html>

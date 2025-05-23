@@ -37,9 +37,3 @@ p {
 .btn:hover {
     background-color: #eee;
 }
-
-.logout {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-}

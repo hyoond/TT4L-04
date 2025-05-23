@@ -1,48 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Dashboard - TimelySync</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
-        }
-        th, td {
-            padding: 10px;
-            text-align: center;
-        }
-        .actions {
-            margin-top: 20px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
 </head>
 <body>
-    <div class="logout">
-        <a href="{{ url_for('logout') }}" class="btn">Logout</a>
-    </div>
-    
-    <div class="container">
-        <h2>Welcome, {{ username }}!</h2>
-        <p>This is your dashboard.</p>
 
-        {% if timetable %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Subject</th>
-                        <th>Day</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                        <th>Location</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in timetable %}
+    <div class="top-bar">
+        <div class="top-left">
+            <h2>Welcome, {{ username }}</h2>
+        </div>
+        <div class="top-right">
+            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
+            <form action="{{ url_for('logout') }}" method="post">
+                <button class="btn" type="submit">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    {% if alert %}
+        <p style="color: green;">{{ alert }}</p>
+    {% endif %}
+
+    <div class="container">
+        <h2>Your Timetable</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Day</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in timetable %}
                     <tr>
                         <td>{{ entry[0] }}</td>
                         <td>{{ entry[1] }}</td>
@@ -50,21 +44,14 @@
                         <td>{{ entry[3] }}</td>
                         <td>{{ entry[4] }}</td>
                     </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>You haven't added any timetable entries yet.</p>
-        {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
 
         <div class="actions">
-            <a href="{{ url_for('timetable') }}" class="btn">Add Timetable Entry</a>
+            <a href="{{ url_for('timetable') }}" class="btn">Add Entry</a>
         </div>
     </div>
-    {% if alert %}
-        <script>
-            alert("{{ alert }}");
-        </script>
-    {% endif %}
+
 </body>
 </html>
