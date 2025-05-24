@@ -161,6 +161,7 @@ def settings():
         return redirect(url_for('login'))
 
     email = session['email']
+    role = session.get('role')
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
@@ -172,7 +173,11 @@ def settings():
         ''', (time_format, email))
         conn.commit()
         session['alert'] = "Settings updated successfully"
-        return redirect(url_for('dashboard'))
+        if role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        else:
+            return redirect(url_for('dashboard'))
+
 
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (email,))
     settings_data = cursor.fetchone()
