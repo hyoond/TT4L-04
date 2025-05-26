@@ -31,6 +31,7 @@ table, th, td {
 }
 
 th, td {
+    padding: 5px;
     text-align: center;
     
 }
@@ -41,6 +42,7 @@ th {
     }
     
 tr {
+    padding: 5px;
     height: 75px;
     }
 
@@ -98,7 +100,7 @@ tr {
 
 input[type="text"],
 input[type="time"],
-select {
+input[type="date"] {
     padding: 5px;
     border: 1px solid #ccc;
     border-radius: 6px;
