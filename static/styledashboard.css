@@ -23,7 +23,7 @@ h2 {
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 15px;
 }
 
 table, th, td {
@@ -31,9 +31,18 @@ table, th, td {
 }
 
 th, td {
-    padding: 12px;
     text-align: center;
+    
 }
+
+th {
+    background-color: #ff9966;
+    color: white;
+    }
+    
+tr {
+    height: 75px;
+    }
 
 .actions {
     display: flex;
@@ -48,7 +57,7 @@ th, td {
     text-decoration: none;
     font-weight: bold;
     border-radius: 6px;
-    transition: background-color 0.3s;
+    border-color: transparent;
 }
 
 
@@ -101,3 +110,14 @@ select {
     justify-content: flex-start;
     gap: 10px;
 }
+
+.nav-section {
+            display: flex;
+            gap: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 5px;
+            background-color: #f8f9fa;
+        }
