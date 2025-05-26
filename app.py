@@ -80,7 +80,7 @@ def dashboard():
         return redirect(url_for('login'))
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT subject, day, start_time, end_time, location FROM timetable WHERE email = ?', (session['email'],))
+    cursor.execute('SELECT subject, date, start_time, end_time, location FROM timetable WHERE email = ?', (session['email'],))
     timetable_data = cursor.fetchall()
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (session['email'],))
     settings_data = cursor.fetchone()
@@ -90,7 +90,7 @@ def dashboard():
 
     formatted_timetable = []
     for entry in timetable_data:
-        subject, day, start_str, end_str, location = entry
+        subject, date, start_str, end_str, location = entry
 
         # Convert string times to datetime objects
         start_dt = datetime.strptime(start_str, '%H:%M')
@@ -104,7 +104,7 @@ def dashboard():
             formatted_start = start_dt.strftime('%H:%M')
             formatted_end = end_dt.strftime('%H:%M')
 
-        formatted_timetable.append((subject, day, formatted_start, formatted_end, location))
+        formatted_timetable.append((subject, date, formatted_start, formatted_end, location))
 
     return render_template('dashboard.html',username=session['username'],alert=alert,timetable=formatted_timetable,settings=settings_data)
 
@@ -124,7 +124,7 @@ def timetable():
 
     if request.method == 'POST':
          subject = request.form['subject']
-         day = request.form['day']
+         date = request.form['date']
          start_time = request.form['start_time']
          end_time = request.form['end_time']
          location = request.form['location']
@@ -132,9 +132,9 @@ def timetable():
          conn = sqlite3.connect('database.db')
          cursor = conn.cursor()
          cursor.execute('''
-             INSERT INTO timetable (email, subject, day, start_time, end_time, location)
+             INSERT INTO timetable (email, subject, date, start_time, end_time, location)
              VALUES (?, ?, ?, ?, ?, ?)
-         ''', (session['email'], subject, day, start_time, end_time, location))
+         ''', (session['email'], subject, date, start_time, end_time, location))
          conn.commit()
          conn.close()
          session['alert'] = "Time table added successfully"
@@ -207,7 +207,7 @@ def insert_user(email, password, username, role='user'):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT,
             subject TEXT NOT NULL,
-            day TEXT NOT NULL,
+            date TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
             location TEXT NOT NULL
@@ -255,11 +255,64 @@ def calander_index():
         elif action == 'next_year':
             year += 1
 
-    cal = calendar.HTMLCalendar(firstweekday=6)  
-    calendar_html = cal.formatmonth(year, month)
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT subject, date, start_time, end_time, location FROM timetable')
+    events = cursor.fetchall()
+    conn.close()
 
-    return render_template('calendar.html', calendar=calendar_html, year=year, month=month, today = today)
+    event_dict = {}
+    for subject, date_str, start_time, end_time, location in events:
+        event_date = datetime.strptime(date_str, '%Y-%m-%d')
+        if event_date.year == year and event_date.month == month:
+            day = event_date.day
+            if day not in event_dict:
+                event_dict[day] = []
+            event_dict[day].append({
+                'subject': subject,
+                'start': start_time,
+                'end': end_time,
+                'location': location
+            })
+
+    cal = calendar.HTMLCalendar(firstweekday=6)
+    month_days = cal.itermonthdays(year, month)
+
+    calendar_html = '<table border="0" cellpadding="0" cellspacing="0" class="calendar">\n'
+    calendar_html += f'<tr><th colspan="7">{calendar.month_name[month]} {year}</th></tr>\n'
+    calendar_html += '<tr>' + ''.join(f'<th>{day}</th>' for day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) + '</tr>\n<tr>'
+
+    week_day = 0
+    for day in month_days:
+        if week_day == 7:
+            calendar_html += '</tr>\n<tr>'
+            week_day = 0
+
+        if day == 0:
+            calendar_html += '<td></td>'
+        else:
+            if day in event_dict:
+                events_html = ""
+                for e in event_dict[day]:
+                    events_html += (
+                        f'<div style="font-size: 0.85em;">'
+                        f'<a>{e["subject"]}</a><br>'
+                        f'{e["start"]} - {e["end"]}<br>'
+                        f'<a>{e["location"]}</a>'
+                        f'</div>'
+                    )
+                calendar_html += f'<td class="event">{day}<br>{events_html}</td>'
+            else:
+                calendar_html += f'<td>{day}</td>'
+
+        week_day += 1
+
+    calendar_html += '</tr>\n</table>'
+
+    return render_template('calendar.html', calendar=calendar_html, year=year, month=month, today=today)
+
 
 if __name__ == '__main__':
     insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
     app.run(debug=True)
+    
