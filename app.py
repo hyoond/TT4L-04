@@ -233,17 +233,32 @@ def calander_index():
     now = datetime.now()
     year = now.year
     month = now.month
-    day = now.day
+    today = [year,month]
 
     if request.method == 'POST':
+        action = request.form.get('action')
         year = int(request.form.get('year'))
         month = int(request.form.get('month'))
 
+        if action == 'prev_month':
+            month -= 1
+            if month < 1:
+                month = 12
+                year -= 1
+        elif action == 'next_month':
+            month += 1
+            if month > 12:
+                month = 1
+                year += 1
+        elif action == 'prev_year':
+            year -= 1
+        elif action == 'next_year':
+            year += 1
 
     cal = calendar.HTMLCalendar(firstweekday=6)  
     calendar_html = cal.formatmonth(year, month)
 
-    return render_template('calendar.html', calendar=calendar_html, year=year, month=month)
+    return render_template('calendar.html', calendar=calendar_html, year=year, month=month, today = today)
 
 if __name__ == '__main__':
     insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
