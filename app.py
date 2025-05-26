@@ -4,6 +4,22 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
+#temporarily for test
+conn = sqlite3.connect('database.db')
+cursor = conn.cursor()
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS enrollments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_email TEXT NOT NULL,
+        course_id INTEGER NOT NULL,
+        FOREIGN KEY (user_email) REFERENCES users(email),
+        FOREIGN KEY (course_id) REFERENCES courses(id)
+    )
+''')
+conn.commit()
+conn.close()
+
+
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'
 
@@ -86,12 +102,33 @@ def dashboard():
     cursor = conn.cursor()
 
     # Fetch timetable entries
-    cursor.execute('SELECT subject, day, start_time, end_time, location FROM timetable WHERE email = ?', (session['email'],))
+    cursor.execute('''
+    SELECT subject, day, start_time, end_time, location
+    FROM courses
+    WHERE id IN (
+        SELECT course_id FROM enrollments WHERE user_email = ?
+    )
+''', (session['email'],))
     timetable_data = cursor.fetchall()
 
     # Fetch user settings
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (session['email'],))
     settings_data = cursor.fetchone()
+
+    cursor.execute('''
+        SELECT * FROM courses WHERE id NOT IN (
+            SELECT c.id FROM courses c
+            JOIN timetable t ON 
+                c.subject = t.subject AND 
+                c.day = t.day AND 
+                c.start_time = t.start_time AND 
+                c.end_time = t.end_time AND 
+                c.location = t.location
+            WHERE t.email = ?
+        )
+    ''', (session['email'],))
+    available_courses = cursor.fetchall() 
+
     conn.close()
 
     time_format = settings_data[0] if settings_data else '24h'
@@ -119,8 +156,47 @@ def dashboard():
         username=session['username'],
         alert=alert,
         timetable=formatted_timetable,
-        settings=settings_data
+        settings=settings_data,
+        available_courses=available_courses
     )
+
+@app.route('/enroll_course', methods=['POST'])
+def enroll_course():
+    if 'email' not in session:
+        session['alert'] = "Please login first"
+        return redirect(url_for('login'))
+
+    course_id = request.form.get('course_id')
+    email = session['email']
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    # Create enrollments table if it doesn't exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS enrollments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            course_id INTEGER NOT NULL,
+            FOREIGN KEY (course_id) REFERENCES courses(id)
+        )
+    ''')
+
+    # Check if already enrolled
+    cursor.execute('SELECT * FROM enrollments WHERE user_email = ? AND course_id = ?', (email, course_id))
+    already_enrolled = cursor.fetchone()
+
+    if already_enrolled:
+        session['alert'] = "You are already enrolled in this course."
+    else:
+        cursor.execute('INSERT INTO enrollments (user_email, course_id) VALUES (?, ?)', (email, course_id))
+        conn.commit()
+        session['alert'] = "Enrolled in course successfully!"
+
+    conn.close()
+    return redirect(url_for('dashboard'))
+
+
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
@@ -289,6 +365,26 @@ def insert_user(email, password, username, role='user'):
         CREATE TABLE IF NOT EXISTS settings (
             email TEXT PRIMARY KEY,
             time_format TEXT DEFAULT '24h'
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT NOT NULL
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS enrollments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            course_id INTEGER NOT NULL,
+            FOREIGN KEY (course_id) REFERENCES courses(id)
         )
     ''')
 
