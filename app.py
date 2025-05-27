@@ -78,25 +78,42 @@ def dashboard():
     alert = session.pop('alert', None)
     if 'username' not in session:
         return redirect(url_for('login'))
+    
+    if 'role' in session and session['role'] == 'admin':
+        return redirect(url_for('admin_dashboard'))
+    
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT subject, date, start_time, end_time, location FROM timetable WHERE email = ?', (session['email'],))
+    cursor.execute('SELECT subject, date, day, start_time, end_time, location FROM timetable WHERE email = ?', (session['email'],))
     timetable_data = cursor.fetchall()
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (session['email'],))
     settings_data = cursor.fetchone()
+
+    cursor.execute('''
+        SELECT * FROM courses WHERE id NOT IN (
+            SELECT c.id FROM courses c
+            JOIN timetable t ON 
+                c.subject = t.subject AND 
+                c.day = t.day AND 
+                c.start_time = t.start_time AND 
+                c.end_time = t.end_time AND 
+                c.location = t.location
+            WHERE t.email = ?
+        )
+    ''', (session['email'],))
+    available_courses = cursor.fetchall() 
+
     conn.close()
 
     time_format = settings_data[0] if settings_data else '24h'
 
     formatted_timetable = []
     for entry in timetable_data:
-        subject, date, start_str, end_str, location = entry
+        subject, date, day, start_str, end_str, location = entry
 
-        # Convert string times to datetime objects
         start_dt = datetime.strptime(start_str, '%H:%M')
         end_dt = datetime.strptime(end_str, '%H:%M')
 
-        # Format according to user setting
         if time_format == '12h':
             formatted_start = start_dt.strftime('%I:%M %p')
             formatted_end = end_dt.strftime('%I:%M %p')
@@ -104,9 +121,46 @@ def dashboard():
             formatted_start = start_dt.strftime('%H:%M')
             formatted_end = end_dt.strftime('%H:%M')
 
-        formatted_timetable.append((subject, date, formatted_start, formatted_end, location))
+        formatted_timetable.append((subject, date, day, formatted_start, formatted_end, location))
 
-    return render_template('dashboard.html',username=session['username'],alert=alert,timetable=formatted_timetable,settings=settings_data)
+
+    return render_template('dashboard.html',username=session['username'],alert=alert,timetable=formatted_timetable,settings=settings_data, available_courses=available_courses)
+
+@app.route('/enroll_course', methods=['POST'])
+def enroll_course():
+    if 'email' not in session:
+        session['alert'] = "Please login first"
+        return redirect(url_for('login'))
+
+    course_id = request.form.get('course_id')
+    email = session['email']
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    # Create enrollments table if it doesn't exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS enrollments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT NOT NULL,
+            course_id INTEGER NOT NULL,
+            FOREIGN KEY (course_id) REFERENCES courses(id)
+        )
+    ''')
+
+    # Check if already enrolled
+    cursor.execute('SELECT * FROM enrollments WHERE user_email = ? AND course_id = ?', (email, course_id))
+    already_enrolled = cursor.fetchone()
+
+    if already_enrolled:
+        session['alert'] = "You are already enrolled in this course."
+    else:
+        cursor.execute('INSERT INTO enrollments (user_email, course_id) VALUES (?, ?)', (email, course_id))
+        conn.commit()
+        session['alert'] = "Enrolled in course successfully!"
+
+    conn.close()
+    return redirect(url_for('dashboard'))
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
@@ -129,12 +183,15 @@ def timetable():
          end_time = request.form['end_time']
          location = request.form['location']
 
+         date_obj = datetime.strptime(date, '%Y-%m-%d')
+         day_of_week = date_obj.strftime('%A')
+
          conn = sqlite3.connect('database.db')
          cursor = conn.cursor()
          cursor.execute('''
-             INSERT INTO timetable (email, subject, date, start_time, end_time, location)
-             VALUES (?, ?, ?, ?, ?, ?)
-         ''', (session['email'], subject, date, start_time, end_time, location))
+             INSERT INTO timetable (email, subject, date, day, start_time, end_time, location)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+         ''', (session['email'], subject, date, day_of_week, start_time, end_time, location))
          conn.commit()
          conn.close()
          session['alert'] = "Time table added successfully"
@@ -177,9 +234,59 @@ def admin_dashboard():
     cursor = conn.cursor()
     cursor.execute('SELECT username, email FROM users WHERE role = "user"')
     users = cursor.fetchall()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT NOT NULL
+        )
+    ''')
+    cursor.execute('SELECT * FROM courses')
+    courses = cursor.fetchall()
+
+    conn.close()
+    return render_template('admin_dashboard.html', users=users, courses=courses)
+
+
+@app.route('/create_subject', methods=['POST'])
+def create_subject():
+    if 'role' not in session or session['role'] != 'admin':
+        session['alert'] = "Unauthorized access"
+        return redirect(url_for('login'))
+
+    subject = request.form['subject_name']
+    day = request.form['day']
+    start_time = request.form['start_time']
+    end_time = request.form['end_time']
+    location = request.form['location']
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT NOT NULL
+        )
+    ''')
+
+    cursor.execute('''
+        INSERT INTO courses (subject, day, start_time, end_time, location)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (subject, day, start_time, end_time, location))
+    conn.commit()
     conn.close()
 
-    return render_template('admin_dashboard.html', users=users)
+    session['alert'] = "Course added successfully"
+    return redirect(url_for('admin_dashboard'))
 
 def compare_database(email, password):
     conn = sqlite3.connect('database.db')
@@ -208,6 +315,7 @@ def insert_user(email, password, username, role='user'):
             email TEXT,
             subject TEXT NOT NULL,
             date TEXT NOT NULL,
+            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
             location TEXT NOT NULL
@@ -220,6 +328,28 @@ def insert_user(email, password, username, role='user'):
             time_format TEXT DEFAULT '24h'
         )
     ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS enrollments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_email TEXT NOT NULL,
+        course_id INTEGER NOT NULL,
+        FOREIGN KEY (user_email) REFERENCES users(email),
+        FOREIGN KEY (course_id) REFERENCES courses(id)
+    )
+''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            location TEXT NOT NULL
+        )
+    ''')
+
 
     cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
     if cursor.fetchone() is None:
@@ -315,4 +445,4 @@ def calander_index():
 if __name__ == '__main__':
     insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
     app.run(debug=True)
-    
+    t.day

@@ -44,6 +44,37 @@
         {% else %}
                 <p>You haven't added any timetable entries yet.</p>
         {% endif %}
+
+        <h2>Choose Courses for Your Timetable</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Day</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Location</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in available_courses %}
+                    <tr>
+                        <td>{{ course[1] }}</td>
+                        <td>{{ course[2] }}</td>
+                        <td>{{ course[3] }}</td>
+                        <td>{{ course[4] }}</td>
+                        <td>{{ course[5] }}</td>
+                        <td>
+                            <form action="{{ url_for('enroll_course') }}" method="post">
+                                <input type="hidden" name="course_id" value="{{ course[0] }}">
+                                <button type="submit" class="btn">Enroll</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
     {% if alert %}
