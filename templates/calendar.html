@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flask Calendar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
+</head>
+<body>
+    <div class="top-bar">
+        <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+        <a href="{{ url_for('dashboard') }}" class="btn">← Back to Dashboard</a>
+        <div class="top-bar-right">
+            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
+            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+        </div>
+    </div>
+    <div class="container">
+    <h1>Calendar Viewer</h1>
+    <div class="nav-section" style="border: 0px;">
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <input type="hidden" name="action" value="prev_month">
+                    <button type="submit" class="btn">‹ Prev Month</button>
+                </form>
+                <a>{{ month }}</a>
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <input type="hidden" name="action" value="next_month">
+                    <button type="submit" class="btn">Next Month ›</button>
+                </form>
+            </div>
+
+            <div class="nav-section">
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <input type="hidden" name="action" value="prev_year">
+                    <button type="submit" class="btn">‹ Prev Year</button>
+                </form>
+                <a>{{ year }}</a>
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="year" value="{{ year }}">
+                    <input type="hidden" name="month" value="{{ month }}">
+                    <input type="hidden" name="action" value="next_year">
+                    <button type="submit" class="btn">Next Year ›</button>
+                </form>
+            </div>
+            
+            <div style="display: flex; justify-content: center;">
+            <form method="POST" style="display: inline;">
+                    <input type="hidden" name="year" value="{{ today[0] }}">
+                    <input type="hidden" name="month" value="{{ today[1] }}">
+                    <button type="submit" class="btn">Today</button>
+            </form>
+            </div>
+
+    <div>{{ calendar | safe }}</div>
+    
+</body>
+</html>

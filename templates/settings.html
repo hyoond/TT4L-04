@@ -5,6 +5,14 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
 </head>
 <body>
+    <div class="top-bar">
+        <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+        <a href="{{ url_for('dashboard') }}" class="btn">← Back to Dashboard</a>
+        <div class="top-bar-right">
+            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+        </div>
+    </div> 
+
     <div class="container">
         <h2>User Settings</h2>
         <form method="post" class="form-grid">
@@ -13,6 +21,11 @@
                 <select name="time_format" id="time_format">
                     <option value="12h" {% if settings and settings[0] == '12h' %}selected{% endif %}>12-Hour</option>
                     <option value="24h" {% if settings and settings[0] == '24h' %}selected{% endif %}>24-Hour</option>
+                </select>
+                <label for="theme">Theme:</label>
+                <select name="theme" id="theme">
+                    <option value="light" {% if settings and settings[1] == 'light' %}selected{% endif %}>Light</option>
+                    <option value="dark" {% if settings and settings[1] == 'dark' %}selected{% endif %}>Dark</option>
                 </select>
             </div>
 
