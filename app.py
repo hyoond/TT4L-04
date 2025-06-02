@@ -3,7 +3,7 @@ import sqlite3
 import os
 import calendar
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'  
@@ -84,7 +84,7 @@ def dashboard():
     
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT subject, date, day, start_time, end_time, location FROM timetable WHERE email = ?', (session['email'],))
+    cursor.execute('SELECT subject, date, start_time, end_time, location, day FROM timetable WHERE email = ?', (session['email'],))
     timetable_data = cursor.fetchall()
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (session['email'],))
     settings_data = cursor.fetchone()
@@ -94,6 +94,7 @@ def dashboard():
             SELECT c.id FROM courses c
             JOIN timetable t ON 
                 c.subject = t.subject AND 
+                c.date = t.date AND
                 c.day = t.day AND 
                 c.start_time = t.start_time AND 
                 c.end_time = t.end_time AND 
@@ -109,7 +110,7 @@ def dashboard():
 
     formatted_timetable = []
     for entry in timetable_data:
-        subject, date, day, start_str, end_str, location = entry
+        subject, date, start_str, end_str, location, day = entry
 
         start_dt = datetime.strptime(start_str, '%H:%M')
         end_dt = datetime.strptime(end_str, '%H:%M')
@@ -148,7 +149,6 @@ def enroll_course():
         )
     ''')
 
-    # Check if already enrolled
     cursor.execute('SELECT * FROM enrollments WHERE user_email = ? AND course_id = ?', (email, course_id))
     already_enrolled = cursor.fetchone()
 
@@ -159,8 +159,29 @@ def enroll_course():
         conn.commit()
         session['alert'] = "Enrolled in course successfully!"
 
-    conn.close()
-    return redirect(url_for('dashboard'))
+    cursor.execute('SELECT course_id FROM enrollments WHERE user_email = ?', (session['email'],))
+    result = cursor.fetchone()
+
+    if result:
+        course_id = result[0]
+    
+        cursor.execute('''
+            SELECT id, subject, start_time, end_time, location, date, day 
+            FROM courses 
+            WHERE id = ?
+        ''', (course_id,))
+
+        course_details = cursor.fetchall()
+
+        for course in course_details:
+            course_id, subject, start_time, end_time, location, date, day = course
+
+            cursor.execute('''
+                INSERT INTO timetable (email, subject, date, start_time, end_time, location, day)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (session['email'], subject, date, start_time, end_time, location, day))
+            conn.commit()
+        return redirect(url_for('dashboard'))
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
@@ -238,10 +259,11 @@ def admin_dashboard():
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             subject TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            date TEXT,
+            day TEXT NOT NULL
         )
     ''')
     cursor.execute('SELECT * FROM courses')
@@ -258,10 +280,15 @@ def create_subject():
         return redirect(url_for('login'))
 
     subject = request.form['subject_name']
-    day = request.form['day']
     start_time = request.form['start_time']
     end_time = request.form['end_time']
     location = request.form['location']
+    start_date = request.form['start_date']
+    duration = request.form['duration']
+    date = f"{start_date} ({duration})"
+
+    date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+    day_of_week = date_obj.strftime('%A')
 
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -271,17 +298,18 @@ def create_subject():
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             subject TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            date TEXT,
+            day TEXT NOT NULL
         )
     ''')
 
     cursor.execute('''
-        INSERT INTO courses (subject, day, start_time, end_time, location)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (subject, day, start_time, end_time, location))
+        INSERT INTO courses (subject, start_time, end_time, location, date, day)
+    VALUES (?, ?, ?, ?, ?, ?)
+''', (subject, start_time, end_time, location, date, day_of_week))
     conn.commit()
     conn.close()
 
@@ -315,10 +343,10 @@ def insert_user(email, password, username, role='user'):
             email TEXT,
             subject TEXT NOT NULL,
             date TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            day TEXT NOT NULL
         )
     ''')
 
@@ -343,10 +371,11 @@ def insert_user(email, password, username, role='user'):
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             subject TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            date TEXT,
+            day TEXT NOT NULL
         )
     ''')
 
@@ -393,17 +422,29 @@ def calander_index():
 
     event_dict = {}
     for subject, date_str, start_time, end_time, location in events:
-        event_date = datetime.strptime(date_str, '%Y-%m-%d')
-        if event_date.year == year and event_date.month == month:
-            day = event_date.day
-            if day not in event_dict:
-                event_dict[day] = []
-            event_dict[day].append({
-                'subject': subject,
-                'start': start_time,
-                'end': end_time,
-                'location': location
-            })
+        if '(' in date_str and ')' in date_str:
+            base_date_str = date_str.split('(')[0].strip()
+            duration = int(date_str.split('(')[1].split(')')[0].strip())
+        else:
+            base_date_str = date_str
+            duration = 1  # Default: only once
+
+        try:
+            base_date = datetime.strptime(base_date_str, '%Y-%m-%d')
+        except ValueError:
+            continue
+        for i in range(duration):
+            event_date = base_date + timedelta(weeks=i)
+            if event_date.year == year and event_date.month == month:
+                day = event_date.day
+                if day not in event_dict:
+                    event_dict[day] = []
+                event_dict[day].append({
+                    'subject': subject,
+                    'start': start_time,
+                    'end': end_time,
+                    'location': location
+                })
 
     cal = calendar.HTMLCalendar(firstweekday=6)
     month_days = cal.itermonthdays(year, month)
@@ -445,4 +486,3 @@ def calander_index():
 if __name__ == '__main__':
     insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
     app.run(debug=True)
-    t.day
