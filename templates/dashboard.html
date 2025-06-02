@@ -23,7 +23,8 @@
                 <thead>
                     <tr>
                         <th>Subject</th>
-                        <th>Date</th>
+                        <th>Start Date (Duration of weeks)</th>
+                        <th>Day</th>
                         <th>Start Time</th>
                         <th>End Time</th>
                         <th>Location</th>
@@ -37,6 +38,7 @@
                         <td>{{ entry[2] }}</td>
                         <td>{{ entry[3] }}</td>
                         <td>{{ entry[4] }}</td>
+                        <td>{{ entry[5] }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -50,10 +52,10 @@
             <thead>
                 <tr>
                     <th>Subject</th>
-                    <th>Day</th>
                     <th>Start Time</th>
                     <th>End Time</th>
                     <th>Location</th>
+                    <th>Start Date (Duration of Week)</th>
                     <th>Action</th>
                 </tr>
             </thead>
