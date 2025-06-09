@@ -16,6 +16,9 @@
         <h2>User Settings</h2>
         <form method="post" class="form-grid">
             <div class="form-group">
+                <label>Change username</label>
+                <input type="text" value="{{ username }}" name="username">
+                <br>
                 <label for="time_format">Time Format:</label>
                 <select name="time_format" id="time_format">
                     <option value="12h" {% if settings and settings[0] == '12h' %}selected{% endif %}>12-Hour</option>
