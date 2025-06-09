@@ -190,6 +190,32 @@ def enroll_course():
             ''', (session['email'], subject, date, start_time, end_time, location, day))
             conn.commit()
         return redirect(url_for('dashboard'))
+    
+@app.route('/deletion', methods=['POST'])
+def deletion():
+    user_email = request.form.get('user_email')
+    course_id = request.form.get('course_id')
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    if user_email:
+        cursor.execute('''
+                       DELETE FROM users
+                       WHERE email = ?
+                       ''',(user_email,))
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+        
+    if course_id:
+        cursor.execute('''
+                       DELETE FROM courses
+                       WHERE id = ?
+                       ''', (course_id,))
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+    
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
