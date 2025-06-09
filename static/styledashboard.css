@@ -123,3 +123,8 @@ input[type="date"] {
             padding: 5px;
             background-color: #f8f9fa;
         }
+
+.calendar td.today {
+    background-color: #ff9966;
+    border: 2px solid rgb(46, 40, 28);
+}
