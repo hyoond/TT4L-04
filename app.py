@@ -84,6 +84,14 @@ def dashboard():
     
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+            SELECT username FROM users
+             WHERE email = ?
+         ''', (session['email'],))
+    result = cursor.fetchone()
+    username = result[0]
     cursor.execute('SELECT subject, date, start_time, end_time, location, day FROM timetable WHERE email = ?', (session['email'],))
     timetable_data = cursor.fetchall()
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (session['email'],))
@@ -125,7 +133,7 @@ def dashboard():
         formatted_timetable.append((subject, date, day, formatted_start, formatted_end, location))
 
 
-    return render_template('dashboard.html',username=session['username'],alert=alert,timetable=formatted_timetable,settings=settings_data, available_courses=available_courses)
+    return render_template('dashboard.html',username=username,alert=alert,timetable=formatted_timetable,settings=settings_data, available_courses=available_courses)
 
 @app.route('/enroll_course', methods=['POST'])
 def enroll_course():
@@ -139,7 +147,6 @@ def enroll_course():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
-    # Create enrollments table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS enrollments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -229,8 +236,20 @@ def settings():
     email = session['email']
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
+    cursor.execute('''
+            SELECT username FROM users
+             WHERE email = ?
+         ''', (email,))
+    result = cursor.fetchone()
+    username = result[0]
 
     if request.method == 'POST':
+        new_username = request.form.get('username')
+        cursor.execute(''' 
+            UPDATE users SET username = ?
+            WHERE email = ?
+            ''', (new_username, email))
+        conn.commit()
         time_format = request.form.get('time_format')
         cursor.execute('''
             UPDATE settings SET time_format = ?
@@ -244,7 +263,7 @@ def settings():
     settings_data = cursor.fetchone()
     conn.close()
 
-    return render_template('settings.html', settings=settings_data)
+    return render_template('settings.html', settings=settings_data, username = username)
 
 @app.route('/admin')
 def admin_dashboard():
@@ -427,7 +446,7 @@ def calander_index():
             duration = int(date_str.split('(')[1].split(')')[0].strip())
         else:
             base_date_str = date_str
-            duration = 1  # Default: only once
+            duration = 1  
 
         try:
             base_date = datetime.strptime(base_date_str, '%Y-%m-%d')
