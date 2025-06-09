@@ -80,6 +80,7 @@ def dashboard():
         return redirect(url_for('login'))
     
     if 'role' in session and session['role'] == 'admin':
+        session['alert'] = "Login successfully"
         return redirect(url_for('admin_dashboard'))
     
     conn = sqlite3.connect('database.db')
@@ -269,7 +270,8 @@ def settings():
 def admin_dashboard():
     if 'role' not in session or session['role'] != 'admin':
         return redirect(url_for('login'))
-
+    
+    alert = session.pop('alert', None)
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('SELECT username, email FROM users WHERE role = "user"')
@@ -289,7 +291,7 @@ def admin_dashboard():
     courses = cursor.fetchall()
 
     conn.close()
-    return render_template('admin_dashboard.html', users=users, courses=courses)
+    return render_template('admin_dashboard.html', users=users, courses=courses, alert=alert)
 
 
 @app.route('/create_subject', methods=['POST'])
