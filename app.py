@@ -411,7 +411,7 @@ def calander_index():
     now = datetime.now()
     year = now.year
     month = now.month
-    today = [year,month]
+    today = [now.year, now.month, now.day]
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -481,6 +481,7 @@ def calander_index():
         if day == 0:
             calendar_html += '<td></td>'
         else:
+            is_today = (year == today[0] and month == today[1] and day == today[2])
             if day in event_dict:
                 events_html = ""
                 for e in event_dict[day]:
@@ -491,9 +492,11 @@ def calander_index():
                         f'<a>{e["location"]}</a>'
                         f'</div>'
                     )
-                calendar_html += f'<td class="event">{day}<br>{events_html}</td>'
+                class_name = "event today" if is_today else "event"
+                calendar_html += f'<td class="{class_name}">{day}<br>{events_html}</td>'
             else:
-                calendar_html += f'<td>{day}</td>'
+                class_name = "today" if is_today else ""
+                calendar_html += f'<td class="{class_name}">{day}</td>'
 
         week_day += 1
 
