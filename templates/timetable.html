@@ -6,10 +6,10 @@
 </head>
 <body>
      <div class="top-bar">
-        <div class="top-left">
             <a href="{{ url_for('dashboard') }}" class="btn">← Back to Dashboard</a>
-        </div>
-        <div class="top-right">
+            <a href="{{ url_for('calander_index') }}" class="btn">Calender</a>
+        <div class="top-bar-right">
+            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
             <a href="{{ url_for('logout') }}" class="btn">Logout</a>
         </div>
     </div>
