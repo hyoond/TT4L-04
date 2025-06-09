@@ -9,18 +9,14 @@
 
     <div class="top-bar">
         <div class="top-left">
+            <h1 style="padding: 0%; margin: 0%;">ADMIN DASHBOARD</h1>
         </div>
         <div class="top-right">
-            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
             <form action="{{ url_for('logout') }}" method="post">
                 <button class="btn" type="submit">Logout</button>
             </form>
         </div>
     </div>
-
-    {% if alert %}
-        <p style="color: green;">{{ alert }}</p>
-    {% endif %}
 
     <div class="container">
         <h2>Welcome, {{ username }}</h2>
@@ -74,6 +70,7 @@
             </div>
         </form>
 
+        <br>
         {% if courses %}
 <details>
     <summary>Existing Courses</summary>
@@ -102,6 +99,10 @@
 </details>
 {% endif %}
     </div>
-
+{% if alert %}
+    <script>
+    alert("{{ alert }}");
+    </script>
+{% endif %}
 </body>
 </html>
