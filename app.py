@@ -149,39 +149,65 @@ def enroll_course():
         )
     ''')
 
+    
     cursor.execute('SELECT * FROM enrollments WHERE user_email = ? AND course_id = ?', (email, course_id))
     already_enrolled = cursor.fetchone()
 
     if already_enrolled:
         session['alert'] = "You are already enrolled in this course."
-    else:
-        cursor.execute('INSERT INTO enrollments (user_email, course_id) VALUES (?, ?)', (email, course_id))
-        conn.commit()
-        session['alert'] = "Enrolled in course successfully!"
-
-    cursor.execute('SELECT course_id FROM enrollments WHERE user_email = ?', (session['email'],))
-    result = cursor.fetchone()
-
-    if result:
-        course_id = result[0]
-    
-        cursor.execute('''
-            SELECT id, subject, start_time, end_time, location, date, day 
-            FROM courses 
-            WHERE id = ?
-        ''', (course_id,))
-
-        course_details = cursor.fetchall()
-
-        for course in course_details:
-            course_id, subject, start_time, end_time, location, date, day = course
-
-            cursor.execute('''
-                INSERT INTO timetable (email, subject, date, start_time, end_time, location, day)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (session['email'], subject, date, start_time, end_time, location, day))
-            conn.commit()
+        conn.close()
         return redirect(url_for('dashboard'))
+
+    
+    cursor.execute('SELECT id, subject, start_time, end_time, location, date, day FROM courses WHERE id = ?', (course_id,))
+    new_course = cursor.fetchone()
+
+    if not new_course:
+        session['alert'] = "Course not found!"
+        conn.close()
+        return redirect(url_for('dashboard'))
+
+    new_course_id, new_subject, new_start_time, new_end_time, new_location, new_date, new_day = new_course
+
+    
+    cursor.execute('''
+        SELECT c.subject, c.start_time, c.end_time, c.date, c.day
+        FROM courses c
+        JOIN enrollments e ON c.id = e.course_id
+        WHERE e.user_email = ?
+    ''', (email,))
+    enrolled_courses = cursor.fetchall()
+
+    new_start = datetime.strptime(new_start_time, '%H:%M')
+    new_end = datetime.strptime(new_end_time, '%H:%M')
+    new_date_only = new_date.split(' ')[0]
+
+    if enrolled_courses:  
+        for course in enrolled_courses:
+            subject, start_time, end_time, exist_date, day = course
+            exist_start = datetime.strptime(start_time, '%H:%M')
+            exist_end = datetime.strptime(end_time, '%H:%M')
+            exist_date_only = exist_date.split(' ')[0]
+
+            if new_date_only == exist_date_only and (new_start < exist_end) and (new_end > exist_start):
+                session['alert'] = f"Clash detected with your enrolled course '{subject}' on {exist_date_only}!"
+                conn.close()
+                return redirect(url_for('dashboard'))
+
+    cursor.execute('INSERT INTO enrollments (user_email, course_id) VALUES (?, ?)', (email, course_id))
+    
+    
+    cursor.execute('''
+        INSERT INTO timetable (email, subject, date, start_time, end_time, location, day)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (email, new_subject, new_date, new_start_time, new_end_time, new_location, new_day))
+
+    conn.commit()
+    conn.close()
+
+    session['alert'] = "Enrolled in course successfully!"
+    return redirect(url_for('dashboard'))
+
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
@@ -229,8 +255,20 @@ def settings():
     email = session['email']
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
+    cursor.execute('''
+            SELECT username FROM users
+             WHERE email = ?
+         ''', (email,))
+    result = cursor.fetchone()
+    username = result[0]
 
     if request.method == 'POST':
+        new_username = request.form.get('username')
+        cursor.execute(''' 
+            UPDATE users SET username = ?
+            WHERE email = ?
+            ''', (new_username, email))
+        conn.commit()
         time_format = request.form.get('time_format')
         cursor.execute('''
             UPDATE settings SET time_format = ?
@@ -244,7 +282,8 @@ def settings():
     settings_data = cursor.fetchone()
     conn.close()
 
-    return render_template('settings.html', settings=settings_data)
+    return render_template('settings.html', settings=settings_data, username = username)
+
 
 @app.route('/admin')
 def admin_dashboard():
@@ -268,9 +307,11 @@ def admin_dashboard():
     ''')
     cursor.execute('SELECT * FROM courses')
     courses = cursor.fetchall()
-
     conn.close()
-    return render_template('admin_dashboard.html', users=users, courses=courses)
+
+    alert = session.pop('alert', None)  
+    return render_template('admin_dashboard.html', users=users, courses=courses, alert=alert)
+
 
 
 @app.route('/create_subject', methods=['POST'])
@@ -307,9 +348,9 @@ def create_subject():
     ''')
 
     cursor.execute('''
-        SELECT subject, start_time, end_time FROM courses
-        WHERE location = ? AND date = ?
-    ''', (location, date))
+        SELECT subject, start_time, end_time, date FROM courses
+        WHERE location = ? 
+    ''', (location,))
 
     existing_courses = cursor.fetchall()
 
@@ -317,23 +358,54 @@ def create_subject():
     new_end = datetime.strptime(end_time, '%H:%M')
 
     for existing in existing_courses:
-        exist_start = datetime.strptime(existing[1], '%H:%M')
-        exist_end = datetime.strptime(existing[2], '%H:%M')
+        exist_subject, exist_start_time, exist_end_time, exist_date = existing
+        exist_date_only = exist_date.split(' ')[0]  
 
-        # Check overlap
-        if (new_start < exist_end) and (new_end > exist_start):
-            conn.close()
-            session['alert'] = f"Time conflict with existing subject '{existing[0]}' at this location!"
-            return redirect(url_for('admin_dashboard'))
+        if exist_date_only == start_date:  
+            exist_start = datetime.strptime(exist_start_time, '%H:%M')
+            exist_end = datetime.strptime(exist_end_time, '%H:%M')
 
+            # Check overlap
+            if (new_start < exist_end) and (new_end > exist_start):
+                conn.close()
+                session['alert'] = f"Time conflict with existing subject '{exist_subject}' at this location!"
+                return redirect(url_for('admin_dashboard'))
+
+  
     cursor.execute('''
         INSERT INTO courses (subject, start_time, end_time, location, date, day)
-    VALUES (?, ?, ?, ?, ?, ?)
-''', (subject, start_time, end_time, location, date, day_of_week))
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (subject, start_time, end_time, location, date, day_of_week))
     conn.commit()
     conn.close()
 
     session['alert'] = "Course added successfully"
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/deletion', methods=['POST'])
+def deletion():
+    user_email = request.form.get('user_email')
+    course_id = request.form.get('course_id')
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    if user_email:
+        cursor.execute('''
+                       DELETE FROM users
+                       WHERE email = ?
+                       ''',(user_email,))
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+        
+    if course_id:
+        cursor.execute('''
+                       DELETE FROM courses
+                       WHERE id = ?
+                       ''', (course_id,))
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+    
     return redirect(url_for('admin_dashboard'))
 
 def compare_database(email, password):

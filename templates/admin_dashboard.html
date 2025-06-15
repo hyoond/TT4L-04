@@ -9,18 +9,14 @@
 
     <div class="top-bar">
         <div class="top-left">
+            <h1 style="padding: 0%; margin: 0%;">ADMIN DASHBOARD</h1>
         </div>
         <div class="top-right">
-            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
             <form action="{{ url_for('logout') }}" method="post">
                 <button class="btn" type="submit">Logout</button>
             </form>
         </div>
     </div>
-
-    {% if alert %}
-        <p style="color: green;">{{ alert }}</p>
-    {% endif %}
 
     <div class="container">
         <h2>Welcome, {{ username }}</h2>
@@ -31,6 +27,7 @@
                     <tr>
                         <th>Username</th>
                         <th>Email</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,6 +35,12 @@
                     <tr>
                         <td>{{ user[0] }}</td>
                         <td>{{ user[1] }}</td>
+                        <td>
+                            <form action="{{ url_for('deletion') }}" method="post">
+                                    <input type="hidden" name="user_email" value="{{ user[1] }}">
+                                    <button type="submit" class="btn">Delete</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -74,6 +77,7 @@
             </div>
         </form>
 
+        <br>
         {% if courses %}
 <details>
     <summary>Existing Courses</summary>
@@ -85,6 +89,7 @@
                 <th>End Time</th>
                 <th>Location</th>
                 <th>Start Date (Duration of Week)</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -95,6 +100,12 @@
                 <td>{{ course[3] }}</td>
                 <td>{{ course[4] }}</td>
                 <td>{{ course[5] }}</td>
+                <td>
+                            <form action="{{ url_for('deletion') }}" method="post">
+                                    <input type="hidden" name="course_id" value="{{ course[0] }}">
+                                    <button type="submit" class="btn">Delete</button>
+                            </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -102,6 +113,10 @@
 </details>
 {% endif %}
     </div>
-
+{% if alert %}
+    <script>
+    alert("{{ alert }}");
+    </script>
+{% endif %}
 </body>
 </html>

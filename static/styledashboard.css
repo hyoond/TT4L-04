@@ -23,7 +23,7 @@ h2 {
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 15px;
 }
 
 table, th, td {
@@ -31,9 +31,20 @@ table, th, td {
 }
 
 th, td {
-    padding: 12px;
+    padding: 5px;
     text-align: center;
+    
 }
+
+th {
+    background-color: #ff9966;
+    color: white;
+    }
+    
+tr {
+    padding: 5px;
+    height: 75px;
+    }
 
 .actions {
     display: flex;
@@ -48,7 +59,7 @@ th, td {
     text-decoration: none;
     font-weight: bold;
     border-radius: 6px;
-    transition: background-color 0.3s;
+    border-color: transparent;
 }
 
 
@@ -89,7 +100,7 @@ th, td {
 
 input[type="text"],
 input[type="time"],
-select {
+input[type="date"] {
     padding: 5px;
     border: 1px solid #ccc;
     border-radius: 6px;
@@ -100,4 +111,20 @@ select {
     display: flex;
     justify-content: flex-start;
     gap: 10px;
+}
+
+.nav-section {
+            display: flex;
+            gap: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 5px;
+            background-color: #f8f9fa;
+        }
+
+.calendar td.today {
+    background-color: #ff9966;
+    border: 2px solid rgb(46, 40, 28);
 }

@@ -12,5 +12,10 @@
         <p>Auto-Sync Your MMU Timetable to Your Digital Calendar!</p>
         <a href="/login" class="btn">Get Started</a>
     </div>
+    {% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+    {% endif %}
 </body>
 </html>
