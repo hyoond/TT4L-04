@@ -15,7 +15,7 @@
      <input type="username" id="username" name="username" 
          placeholder="Enter your Username" required>
            </div>
-         <br>
+           <br>
         <div class="input">
      <label for="Email">Email:</label>
 <input type="email" id="first" name="email" 
@@ -40,11 +40,6 @@
     <a href="{{ url_for('login_form') }}">Login Here</a>
     </div>
   </form>
-  {% if alert %}
-        <script>
-            alert("{{ alert }}");
-        </script>
-    {% endif %}
 </body>
 
 </html>
