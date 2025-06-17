@@ -28,6 +28,7 @@
                         <th>Start Time</th>
                         <th>End Time</th>
                         <th>Location</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -39,6 +40,12 @@
                         <td>{{ entry[3] }}</td>
                         <td>{{ entry[4] }}</td>
                         <td>{{ entry[5] }}</td>
+                        <td>
+                        <form action="{{ url_for('deletion') }}" method="post">
+                                    <input type="hidden" name="timetable_id" value="{{ entry[6] }}">
+                                    <input type="hidden" name="course_name" value="{{ entry[0] }}">
+                                    <button type="submit" class="btn">Delete</button>
+                            </form></td>
                     </tr>
                     {% endfor %}
                 </tbody>
