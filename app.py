@@ -69,7 +69,10 @@ def login():
         session['email'] = user[1]
         session['role'] = user[4]
         session['alert'] = "Login successfully"
-        return redirect(url_for('dashboard'))
+        if session['role'] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        else:
+            return redirect(url_for('dashboard'))
     else:
         return render_template("login.html", alert = "User not found or incorrect password")
 
@@ -79,12 +82,12 @@ def dashboard():
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    if 'role' in session and session['role'] == 'admin':
-        return redirect(url_for('admin_dashboard'))
-    
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT subject, date, start_time, end_time, location, day FROM timetable WHERE email = ?', (session['email'],))
+    cursor.execute('SELECT username FROM users WHERE email = ?',(session['email'],))
+    username = cursor.fetchone()
+    session['username'] = username[0]
+    cursor.execute('SELECT subject, date, start_time, end_time, location, day, id FROM timetable WHERE email = ?', (session['email'],))
     timetable_data = cursor.fetchall()
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (session['email'],))
     settings_data = cursor.fetchone()
@@ -110,7 +113,7 @@ def dashboard():
 
     formatted_timetable = []
     for entry in timetable_data:
-        subject, date, start_str, end_str, location, day = entry
+        subject, date, start_str, end_str, location, day, id = entry
 
         start_dt = datetime.strptime(start_str, '%H:%M')
         end_dt = datetime.strptime(end_str, '%H:%M')
@@ -122,7 +125,7 @@ def dashboard():
             formatted_start = start_dt.strftime('%H:%M')
             formatted_end = end_dt.strftime('%H:%M')
 
-        formatted_timetable.append((subject, date, day, formatted_start, formatted_end, location))
+        formatted_timetable.append((subject, date, day, formatted_start, formatted_end, location,id))
 
 
     return render_template('dashboard.html',username=session['username'],alert=alert,timetable=formatted_timetable,settings=settings_data, available_courses=available_courses)
@@ -287,9 +290,9 @@ def settings():
 
 @app.route('/admin')
 def admin_dashboard():
+
     if 'role' not in session or session['role'] != 'admin':
         return redirect(url_for('login'))
-
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('SELECT username, email FROM users WHERE role = "user"')
@@ -386,6 +389,8 @@ def create_subject():
 def deletion():
     user_email = request.form.get('user_email')
     course_id = request.form.get('course_id')
+    timetable_id = request.form.get('timetable_id')
+    subject_name = request.form.get('course_name')
 
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -405,8 +410,34 @@ def deletion():
                        ''', (course_id,))
         conn.commit()
         session['alert'] = "Deleted successfully."
+
+    if timetable_id:
+        cursor.execute('''
+                      DELETE FROM timetable
+                      WHERE id = ?
+                      ''', (timetable_id,))
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+
+    if subject_name:
+        cursor.execute('''
+                   SELECT id FROM courses
+                   WHERE subject = ?
+                   ''', (subject_name,))
+        enroll_course = cursor.fetchall()
+        session['alert'] = "Deleted successfully."
+
+        if enroll_course:
+            cursor.execute('''
+                           DELETE FROM enrollments
+                           WHERE id course_id = ? AND user_email = ?
+                           ''', (enroll_course,session['email'],))
+            conn.commit()
     
-    return redirect(url_for('admin_dashboard'))
+    if session['role'] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+    else:
+            return redirect(url_for('dashboard'))
 
 def compare_database(email, password):
     conn = sqlite3.connect('database.db')
@@ -484,7 +515,7 @@ def calander_index():
     now = datetime.now()
     year = now.year
     month = now.month
-    today = [year,month]
+    today = [now.year, now.month, now.day]
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -519,8 +550,7 @@ def calander_index():
             duration = int(date_str.split('(')[1].split(')')[0].strip())
         else:
             base_date_str = date_str
-            duration = 1  # Default: only once
-
+            duration = 1  
         try:
             base_date = datetime.strptime(base_date_str, '%Y-%m-%d')
         except ValueError:
@@ -554,6 +584,7 @@ def calander_index():
         if day == 0:
             calendar_html += '<td></td>'
         else:
+            is_today = (year == today[0] and month == today[1] and day == today[2])
             if day in event_dict:
                 events_html = ""
                 for e in event_dict[day]:
@@ -564,9 +595,11 @@ def calander_index():
                         f'<a>{e["location"]}</a>'
                         f'</div>'
                     )
-                calendar_html += f'<td class="event">{day}<br>{events_html}</td>'
+                class_name = "event today" if is_today else "event"
+                calendar_html += f'<td class="{class_name}">{day}<br>{events_html}</td>'
             else:
-                calendar_html += f'<td>{day}</td>'
+                class_name = "today" if is_today else ""
+                calendar_html += f'<td class="{class_name}">{day}</td>'
 
         week_day += 1
 
