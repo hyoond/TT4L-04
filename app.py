@@ -2,21 +2,20 @@ from flask import Flask, render_template, request, redirect, url_for, session, m
 import sqlite3
 import os
 import calendar
+from ics import Calendar
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'  
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
+ALLOWED_EXTENSIONS = {'ics'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Helper: File type check
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Helper: Password validation
 def valid_password(password):
     if len(password) < 8:
         return False, "Password must be at least 8 characters long."
@@ -503,6 +502,75 @@ def insert_user(email, password, username, role='user'):
         cursor.execute('INSERT OR IGNORE INTO settings (email) VALUES (?)', (email,))
         conn.commit()
     conn.close()
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_timetable():
+    if 'username' not in session:
+        session['alert'] = "Please login first"
+        return redirect(url_for('login'))
+
+    alert = None
+    events = []
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'upload_file':
+            if 'file' not in request.files:
+                alert = "No file part in request"
+            else:
+                file = request.files['file']
+                if file.filename == '':
+                    alert = "No selected file"
+                elif file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
+                    alert = f"File uploaded successfully!"
+
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        calendar = Calendar(f.read())
+                        for event in calendar.events:
+                            start_local = event.begin.astimezone(timezone(timedelta(hours=8)))
+                            end_local = event.end.astimezone(timezone(timedelta(hours=8)))
+                            events.append({
+                                'name': event.name,
+                                'start': start_local.strftime('%d/%m/%Y %H:%M'),
+                                'end': end_local.strftime('%d/%m/%Y %H:%M'),
+                                'location': event.location,
+                                'description': event.description
+                            })
+                else:
+                    alert = "Only .ics files are allowed."
+
+        elif action == 'add_event':
+            name = request.form.get('name')
+            start = request.form.get('start')
+            end = request.form.get('end')
+            location = request.form.get('location')
+
+            date, start_time = start.split(' ')
+            _, end_time = end.split(' ')
+
+
+            date_obj = datetime.strptime(date, '%d/%m/%Y')
+            day = date_obj.strftime('%A')
+            date_str = date_obj.strftime('%Y-%m-%d') 
+
+            conn = sqlite3.connect('database.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO timetable (email, subject, date, start_time, end_time, location, day)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (session['email'], name, date_str, start_time, end_time, location, day))
+            conn.commit()
+            conn.close()
+            session['alert'] = "Event added to timetable successfully!"
+            return redirect(url_for('dashboard'))
+
+    return render_template('upload.html', alert=alert, events=events)
+
 
 @app.route('/calander_index', methods=['GET', 'POST'])
 def calander_index():
