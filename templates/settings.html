@@ -6,9 +6,13 @@
 </head>
 <body>
     <div class="top-bar">
-        <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
-        <a href="{{ url_for('dashboard') }}" class="btn">← Back to Dashboard</a>
+        <div class="top-bar-left">
+            <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+            <a href="{{ url_for('upload_timetable') }}" class="btn">Upload</a>
+        </div>
+        <a href="{{ url_for('calander_index') }}" class="btn">Calender</a>
         <div class="top-bar-right">
+            <a href="{{ url_for('dashboard') }}" class="btn">← Back to Dashboard</a>
             <a href="{{ url_for('logout') }}" class="btn">Logout</a>
         </div>
     </div>
