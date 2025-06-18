@@ -6,7 +6,10 @@
 </head>
 <body>
     <div class="top-bar">
-        <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+        <div class="top-bar-left">
+            <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+            <a href="{{ url_for('upload_timetable') }}" class="btn">Upload</a>
+        </div>
         <a href="{{ url_for('calander_index') }}" class="btn">Calender</a>
         <div class="top-bar-right">
             <a href="{{ url_for('settings') }}" class="btn">Settings</a>
@@ -22,7 +25,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Subject</th>
+                        <th>Subject/Name</th>
                         <th>Start Date (Duration of weeks)</th>
                         <th>Day</th>
                         <th>Start Time</th>
