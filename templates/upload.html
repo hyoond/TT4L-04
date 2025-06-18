@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Upload Event</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styledashboard.css') }}">
+</head>
+<body>
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+            <a href="{{ url_for('dashboard') }}" class="btn">← Back to Dashboard</a>
+        </div>
+        <a href="{{ url_for('calander_index') }}" class="btn">Calendar</a>
+        <div class="top-bar-right">
+            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
+            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Upload Events From eBwise <span class="info-icon" title='How to Use?
+            1. Go to eBwise → Profile → Calendar
+            2. Scroll down the calendar page and click "Import or export calendars"
+            3. Click "Export Calendar"
+            4. Choose wanted events and time range
+            5. Click "Export"
+            6. Upload the file here'>🛈</span></h2>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <input type="hidden" name="action" value="upload_file">
+            <p style="font-size: 0.75em;">*Only .ics file are accepted</p>
+            <button type="submit" class="btn">Upload</button>
+        </form>
+        <br>
+
+    {% if events %}
+        <h3>Events Preview</h3>
+        <form method="POST" action="{{ url_for('upload_timetable') }}">
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Location</th>
+                    <th>Action</th>
+                </tr>
+                {% for event in events %}
+                <tr>
+                     <td>{{ event.name }}</td>
+                         <td>{{ event.start }}</td>
+                         <td>{{ event.end }}</td>
+                         <td>{{ event.location }}</td>
+                         <td>
+                             <form action="{{ url_for('upload_timetable') }}" method="post">
+                                 <input type="hidden" name="action" value="add_event">
+                                 <input type="hidden" name="name" value="{{ event.name }}">
+                                 <input type="hidden" name="start" value="{{ event.start }}">
+                                 <input type="hidden" name="end" value="{{ event.end }}">
+                                 <input type="hidden" name="location" value="{{ event.location }}">
+                                 <input type="hidden" name="description" value="{{ event.description }}">
+                                 <button type="submit" class="btn">Add to Timetable</button>
+                             </form>
+                         </td>
+                     </tr>
+                {% endfor %}
+            </table>
+            <br>
+        </form>
+    </div>
+    {% endif %}
+    {% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+    {% endif %}
+</body>
+</html>
