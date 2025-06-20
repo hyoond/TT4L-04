@@ -6,7 +6,10 @@
 </head>
 <body>
     <div class="top-bar">
-        <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+        <div class="top-bar-left">
+            <a href="{{ url_for('timetable') }}" class="btn">+ Add Entry</a>
+            <a href="{{ url_for('upload_timetable') }}" class="btn">Upload</a>
+        </div>
         <a href="{{ url_for('calander_index') }}" class="btn">Calender</a>
         <div class="top-bar-right">
             <a href="{{ url_for('settings') }}" class="btn">Settings</a>
@@ -22,11 +25,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Subject</th>
-                        <th>Date</th>
+                        <th>Subject/Name</th>
+                        <th>Start Date (Duration of weeks)</th>
+                        <th>Day</th>
                         <th>Start Time</th>
                         <th>End Time</th>
                         <th>Location</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -37,6 +42,13 @@
                         <td>{{ entry[2] }}</td>
                         <td>{{ entry[3] }}</td>
                         <td>{{ entry[4] }}</td>
+                        <td>{{ entry[5] }}</td>
+                        <td>
+                        <form action="{{ url_for('deletion') }}" method="post">
+                                    <input type="hidden" name="timetable_id" value="{{ entry[6] }}">
+                                    <input type="hidden" name="course_name" value="{{ entry[0] }}">
+                                    <button type="submit" class="btn">Delete</button>
+                            </form></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -45,36 +57,38 @@
                 <p>You haven't added any timetable entries yet.</p>
         {% endif %}
 
-        <h2>Choose Courses for Your Timetable</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Subject</th>
-                    <th>Day</th>
-                    <th>Start Time</th>
-                    <th>End Time</th>
-                    <th>Location</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for course in available_courses %}
+        {% if available_courses %}
+            <h2>Choose Courses for Your Timetable</h2>
+            <table>
+                <thead>
                     <tr>
-                        <td>{{ course[1] }}</td>
-                        <td>{{ course[2] }}</td>
-                        <td>{{ course[3] }}</td>
-                        <td>{{ course[4] }}</td>
-                        <td>{{ course[5] }}</td>
-                        <td>
-                            <form action="{{ url_for('enroll_course') }}" method="post">
-                                <input type="hidden" name="course_id" value="{{ course[0] }}">
-                                <button type="submit" class="btn">Enroll</button>
-                            </form>
-                        </td>
+                        <th>Subject</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Location</th>
+                        <th>Start Date (Duration of Week)</th>
+                        <th>Action</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for course in available_courses %}
+                            <tr>
+                            <td>{{ course[1] }}</td>
+                            <td>{{ course[2] }}</td>
+                            <td>{{ course[3] }}</td>
+                            <td>{{ course[4] }}</td>
+                            <td>{{ course[5] }}</td>
+                            <td>
+                                <form action="{{ url_for('enroll_course') }}" method="post">
+                                    <input type="hidden" name="course_id" value="{{ course[0] }}">
+                                    <button type="submit" class="btn">Enroll</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
     </div>
 
     {% if alert %}

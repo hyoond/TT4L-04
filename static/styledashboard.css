@@ -123,3 +123,45 @@ input[type="date"] {
             padding: 5px;
             background-color: #f8f9fa;
         }
+
+.calendar td.today {
+    background-color: #ff9966;
+    border: 2px solid rgb(46, 40, 28);
+}
+
+
+.calendar td {
+    vertical-align: top;
+    width: 120px;
+    height: 100px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+.calendar .event {
+    background-color: #f0f8ff;
+}
+
+.calendar .today {
+    border: 2px solid red;
+}
+
+.calendar .event div {
+    margin-top: 4px;
+    font-size: 0.8em;
+    line-height: 1.2em;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+.info-icon {
+        display: inline-block;
+        margin-left: 8px;
+        font-size: 16px;
+        cursor: help;
+        color: #007BFF;
+    }

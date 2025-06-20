@@ -9,21 +9,17 @@
 
     <div class="top-bar">
         <div class="top-left">
+            <h1 style="padding: 0%; margin: 0%;">ADMIN DASHBOARD</h1>
         </div>
         <div class="top-right">
-            <a href="{{ url_for('settings') }}" class="btn">Settings</a>
             <form action="{{ url_for('logout') }}" method="post">
                 <button class="btn" type="submit">Logout</button>
             </form>
         </div>
     </div>
 
-    {% if alert %}
-        <p style="color: green;">{{ alert }}</p>
-    {% endif %}
-
     <div class="container">
-        <h2>Welcome, {{ username }}</h2>
+        <h2>Welcome, Admin</h2>
         <details>
             <summary>All Registered Users</summary>
             <table>
@@ -31,6 +27,7 @@
                     <tr>
                         <th>Username</th>
                         <th>Email</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,6 +35,12 @@
                     <tr>
                         <td>{{ user[0] }}</td>
                         <td>{{ user[1] }}</td>
+                        <td>
+                            <form action="{{ url_for('deletion') }}" method="post">
+                                    <input type="hidden" name="user_email" value="{{ user[1] }}">
+                                    <button type="submit" class="btn">Delete</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -50,33 +53,33 @@
                 <input type="text" id="subject_name" name="subject_name" required>
             </div>
             <div class="form-group">
-                <label for="day">Day</label>
-                <select id="day" name="day" required>
-                    <option value="" disabled selected>Select a day</option>
-                    <option value="Monday">Monday</option>
-                    <option value="Tuesday">Tuesday</option>
-                    <option value="Wednesday">Wednesday</option>
-                    <option value="Thursday">Thursday</option>
-                    <option value="Friday">Friday</option>
-                </select>
-            </div>
-            <div class="form-group">
                 <label for="start_time">Start Time</label>
-                <input type="time" id="start_time" name="start_time" required>
+                <input type="time" id="start_time" name="start_time" step="1800" required>
+                <p style="font-size: 0.75em;">* Step 30 minutes</p>
             </div>
             <div class="form-group">
                 <label for="end_time">End Time</label>
-                <input type="time" id="end_time" name="end_time" required>
+                <input type="time" id="end_time" name="end_time" step="1800"required>
+                <p style="font-size: 0.75em;">* Step 30 minutes</p>
             </div>
             <div class="form-group">
                 <label for="location">Location</label>
                 <input type="text" id="location" name="location" required>
+            </div>
+            <div class="form-group">
+                 <label for="start_date">Start Date</label>
+                 <input type="date" id="start_date" name="start_date" required>
+            </div>
+            <div class="form-group">
+                <label for="duration">Duration (in weeks)</label>
+                <input type="number" id="duration" name="duration" min="1" value="1" required>
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn">Add Course</button>
             </div>
         </form>
 
+        <br>
         {% if courses %}
 <details>
     <summary>Existing Courses</summary>
@@ -84,10 +87,11 @@
         <thead>
             <tr>
                 <th>Subject</th>
-                <th>Day</th>
                 <th>Start Time</th>
                 <th>End Time</th>
                 <th>Location</th>
+                <th>Start Date (Duration of Week)</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -98,6 +102,12 @@
                 <td>{{ course[3] }}</td>
                 <td>{{ course[4] }}</td>
                 <td>{{ course[5] }}</td>
+                <td>
+                            <form action="{{ url_for('deletion') }}" method="post">
+                                    <input type="hidden" name="course_id" value="{{ course[0] }}">
+                                    <button type="submit" class="btn">Delete</button>
+                            </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -105,6 +115,10 @@
 </details>
 {% endif %}
     </div>
-
+{% if alert %}
+        <script>
+            alert("{{ alert }}");
+        </script>
+{% endif %}
 </body>
 </html>

@@ -2,21 +2,20 @@ from flask import Flask, render_template, request, redirect, url_for, session, m
 import sqlite3
 import os
 import calendar
+from ics import Calendar
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey123'  
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
+ALLOWED_EXTENSIONS = {'ics'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Helper: File type check
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Helper: Password validation
 def valid_password(password):
     if len(password) < 8:
         return False, "Password must be at least 8 characters long."
@@ -69,7 +68,10 @@ def login():
         session['email'] = user[1]
         session['role'] = user[4]
         session['alert'] = "Login successfully"
-        return redirect(url_for('dashboard'))
+        if session['role'] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        else:
+            return redirect(url_for('dashboard'))
     else:
         return render_template("login.html", alert = "User not found or incorrect password")
 
@@ -79,12 +81,12 @@ def dashboard():
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    if 'role' in session and session['role'] == 'admin':
-        return redirect(url_for('admin_dashboard'))
-    
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT subject, date, day, start_time, end_time, location FROM timetable WHERE email = ?', (session['email'],))
+    cursor.execute('SELECT username FROM users WHERE email = ?',(session['email'],))
+    username = cursor.fetchone()
+    session['username'] = username[0]
+    cursor.execute('SELECT subject, date, start_time, end_time, location, day, id FROM timetable WHERE email = ?', (session['email'],))
     timetable_data = cursor.fetchall()
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (session['email'],))
     settings_data = cursor.fetchone()
@@ -94,6 +96,7 @@ def dashboard():
             SELECT c.id FROM courses c
             JOIN timetable t ON 
                 c.subject = t.subject AND 
+                c.date = t.date AND
                 c.day = t.day AND 
                 c.start_time = t.start_time AND 
                 c.end_time = t.end_time AND 
@@ -109,7 +112,7 @@ def dashboard():
 
     formatted_timetable = []
     for entry in timetable_data:
-        subject, date, day, start_str, end_str, location = entry
+        subject, date, start_str, end_str, location, day, id = entry
 
         start_dt = datetime.strptime(start_str, '%H:%M')
         end_dt = datetime.strptime(end_str, '%H:%M')
@@ -121,7 +124,7 @@ def dashboard():
             formatted_start = start_dt.strftime('%H:%M')
             formatted_end = end_dt.strftime('%H:%M')
 
-        formatted_timetable.append((subject, date, day, formatted_start, formatted_end, location))
+        formatted_timetable.append((subject, date, day, formatted_start, formatted_end, location,id))
 
 
     return render_template('dashboard.html',username=session['username'],alert=alert,timetable=formatted_timetable,settings=settings_data, available_courses=available_courses)
@@ -148,19 +151,65 @@ def enroll_course():
         )
     ''')
 
-    # Check if already enrolled
+    
     cursor.execute('SELECT * FROM enrollments WHERE user_email = ? AND course_id = ?', (email, course_id))
     already_enrolled = cursor.fetchone()
 
     if already_enrolled:
         session['alert'] = "You are already enrolled in this course."
-    else:
-        cursor.execute('INSERT INTO enrollments (user_email, course_id) VALUES (?, ?)', (email, course_id))
-        conn.commit()
-        session['alert'] = "Enrolled in course successfully!"
+        conn.close()
+        return redirect(url_for('dashboard'))
 
+    
+    cursor.execute('SELECT id, subject, start_time, end_time, location, date, day FROM courses WHERE id = ?', (course_id,))
+    new_course = cursor.fetchone()
+
+    if not new_course:
+        session['alert'] = "Course not found!"
+        conn.close()
+        return redirect(url_for('dashboard'))
+
+    new_course_id, new_subject, new_start_time, new_end_time, new_location, new_date, new_day = new_course
+
+    
+    cursor.execute('''
+        SELECT c.subject, c.start_time, c.end_time, c.date, c.day
+        FROM courses c
+        JOIN enrollments e ON c.id = e.course_id
+        WHERE e.user_email = ?
+    ''', (email,))
+    enrolled_courses = cursor.fetchall()
+
+    new_start = datetime.strptime(new_start_time, '%H:%M')
+    new_end = datetime.strptime(new_end_time, '%H:%M')
+    new_date_only = new_date.split(' ')[0]
+
+    if enrolled_courses:  
+        for course in enrolled_courses:
+            subject, start_time, end_time, exist_date, day = course
+            exist_start = datetime.strptime(start_time, '%H:%M')
+            exist_end = datetime.strptime(end_time, '%H:%M')
+            exist_date_only = exist_date.split(' ')[0]
+
+            if new_date_only == exist_date_only and (new_start < exist_end) and (new_end > exist_start):
+                session['alert'] = f"Clash detected with your enrolled course '{subject}' on {exist_date_only}!"
+                conn.close()
+                return redirect(url_for('dashboard'))
+
+    cursor.execute('INSERT INTO enrollments (user_email, course_id) VALUES (?, ?)', (email, course_id))
+    
+    
+    cursor.execute('''
+        INSERT INTO timetable (email, subject, date, start_time, end_time, location, day)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (email, new_subject, new_date, new_start_time, new_end_time, new_location, new_day))
+
+    conn.commit()
     conn.close()
+
+    session['alert'] = "Enrolled in course successfully!"
     return redirect(url_for('dashboard'))
+
 
 @app.route('/logout', methods=['POST', 'GET'])
 def logout():
@@ -208,30 +257,41 @@ def settings():
     email = session['email']
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
+    cursor.execute('''
+            SELECT username FROM users
+             WHERE email = ?
+         ''', (email,))
+    result = cursor.fetchone()
+    username = result[0]
 
     if request.method == 'POST':
+        new_username = request.form.get('username')
+        cursor.execute(''' 
+            UPDATE users SET username = ?
+            WHERE email = ?
+            ''', (new_username, email))
+        conn.commit()
         time_format = request.form.get('time_format')
-
         cursor.execute('''
-            UPDATE settings SET time_format = ? WHERE email = ?
+            UPDATE settings SET time_format = ?
+            WHERE email = ?
         ''', (time_format, email))
         conn.commit()
         session['alert'] = "Settings updated successfully"
-        conn.close()
         return redirect(url_for('dashboard'))
 
     cursor.execute('SELECT time_format FROM settings WHERE email = ?', (email,))
     settings_data = cursor.fetchone()
-
     conn.close()
-    return render_template('settings.html', settings=settings_data)
+
+    return render_template('settings.html', settings=settings_data, username = username)
 
 
 @app.route('/admin')
 def admin_dashboard():
+
     if 'role' not in session or session['role'] != 'admin':
         return redirect(url_for('login'))
-
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('SELECT username, email FROM users WHERE role = "user"')
@@ -240,17 +300,20 @@ def admin_dashboard():
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             subject TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            date TEXT,
+            day TEXT NOT NULL
         )
     ''')
     cursor.execute('SELECT * FROM courses')
     courses = cursor.fetchall()
-
     conn.close()
-    return render_template('admin_dashboard.html', users=users, courses=courses)
+
+    alert = session.pop('alert', None)  
+    return render_template('admin_dashboard.html', users=users, courses=courses, alert=alert)
+
 
 
 @app.route('/create_subject', methods=['POST'])
@@ -260,10 +323,15 @@ def create_subject():
         return redirect(url_for('login'))
 
     subject = request.form['subject_name']
-    day = request.form['day']
     start_time = request.form['start_time']
     end_time = request.form['end_time']
     location = request.form['location']
+    start_date = request.form['start_date']
+    duration = request.form['duration']
+    date = f"{start_date} ({duration})"
+
+    date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+    day_of_week = date_obj.strftime('%A')
 
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -273,22 +341,96 @@ def create_subject():
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             subject TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            date TEXT,
+            day TEXT NOT NULL
         )
     ''')
 
     cursor.execute('''
-        INSERT INTO courses (subject, day, start_time, end_time, location)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (subject, day, start_time, end_time, location))
+        SELECT subject, start_time, end_time, date FROM courses
+        WHERE location = ? 
+    ''', (location,))
+
+    existing_courses = cursor.fetchall()
+
+    new_start = datetime.strptime(start_time, '%H:%M')
+    new_end = datetime.strptime(end_time, '%H:%M')
+
+    for existing in existing_courses:
+        exist_subject, exist_start_time, exist_end_time, exist_date = existing
+        exist_date_only = exist_date.split(' ')[0]  
+
+        if exist_date_only == start_date:  
+            exist_start = datetime.strptime(exist_start_time, '%H:%M')
+            exist_end = datetime.strptime(exist_end_time, '%H:%M')
+
+            # Check overlap
+            if (new_start < exist_end) and (new_end > exist_start):
+                conn.close()
+                session['alert'] = f"Time conflict with existing subject '{exist_subject}' at this location!"
+                return redirect(url_for('admin_dashboard'))
+
+  
+    cursor.execute('''
+        INSERT INTO courses (subject, start_time, end_time, location, date, day)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (subject, start_time, end_time, location, date, day_of_week))
     conn.commit()
     conn.close()
 
     session['alert'] = "Course added successfully"
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/deletion', methods=['POST'])
+def deletion():
+    user_email = request.form.get('user_email')
+    course_id = request.form.get('course_id')
+    timetable_id = request.form.get('timetable_id')
+    subject_name = request.form.get('course_name')
+
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    if user_email:
+        cursor.execute('''
+                       DELETE FROM users
+                       WHERE email = ?
+                       ''',(user_email,))
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+        
+    if course_id:
+        cursor.execute('''
+                       DELETE FROM courses
+                       WHERE id = ?
+                       ''', (course_id,))
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+
+    if subject_name:
+        cursor.execute('''
+            DELETE FROM enrollments
+            WHERE course_id IN (
+                SELECT id FROM courses WHERE subject = ?
+            )
+            AND user_email = ?
+        ''', (subject_name, session['email']))
+    
+        cursor.execute('''
+            DELETE FROM timetable
+            WHERE subject = ? AND email = ?
+        ''', (subject_name, session['email']))
+
+        conn.commit()
+        session['alert'] = "Deleted successfully."
+    
+    if session['role'] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+    else:
+            return redirect(url_for('dashboard'))
 
 def compare_database(email, password):
     conn = sqlite3.connect('database.db')
@@ -317,10 +459,10 @@ def insert_user(email, password, username, role='user'):
             email TEXT,
             subject TEXT NOT NULL,
             date TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            day TEXT NOT NULL
         )
     ''')
 
@@ -345,10 +487,11 @@ def insert_user(email, password, username, role='user'):
         CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             subject TEXT NOT NULL,
-            day TEXT NOT NULL,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
-            location TEXT NOT NULL
+            location TEXT NOT NULL,
+            date TEXT,
+            day TEXT NOT NULL
         )
     ''')
 
@@ -360,12 +503,81 @@ def insert_user(email, password, username, role='user'):
         conn.commit()
     conn.close()
 
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_timetable():
+    if 'username' not in session:
+        session['alert'] = "Please login first"
+        return redirect(url_for('login'))
+
+    alert = None
+    events = []
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'upload_file':
+            if 'file' not in request.files:
+                alert = "No file part in request"
+            else:
+                file = request.files['file']
+                if file.filename == '':
+                    alert = "No selected file"
+                elif file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
+                    alert = f"File uploaded successfully!"
+
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        calendar = Calendar(f.read())
+                        for event in calendar.events:
+                            start_local = event.begin.astimezone(timezone(timedelta(hours=8)))
+                            end_local = event.end.astimezone(timezone(timedelta(hours=8)))
+                            events.append({
+                                'name': event.name,
+                                'start': start_local.strftime('%d/%m/%Y %H:%M'),
+                                'end': end_local.strftime('%d/%m/%Y %H:%M'),
+                                'location': event.location,
+                                'description': event.description
+                            })
+                else:
+                    alert = "Only .ics files are allowed."
+
+        elif action == 'add_event':
+            name = request.form.get('name')
+            start = request.form.get('start')
+            end = request.form.get('end')
+            location = request.form.get('location')
+
+            date, start_time = start.split(' ')
+            _, end_time = end.split(' ')
+
+
+            date_obj = datetime.strptime(date, '%d/%m/%Y')
+            day = date_obj.strftime('%A')
+            date_str = date_obj.strftime('%Y-%m-%d') 
+
+            conn = sqlite3.connect('database.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO timetable (email, subject, date, start_time, end_time, location, day)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (session['email'], name, date_str, start_time, end_time, location, day))
+            conn.commit()
+            conn.close()
+            session['alert'] = "Event added to timetable successfully!"
+            return redirect(url_for('dashboard'))
+
+    return render_template('upload.html', alert=alert, events=events)
+
+
 @app.route('/calander_index', methods=['GET', 'POST'])
 def calander_index():
     now = datetime.now()
     year = now.year
     month = now.month
-    today = [year,month]
+    today = [now.year, now.month, now.day]
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -395,17 +607,28 @@ def calander_index():
 
     event_dict = {}
     for subject, date_str, start_time, end_time, location in events:
-        event_date = datetime.strptime(date_str, '%Y-%m-%d')
-        if event_date.year == year and event_date.month == month:
-            day = event_date.day
-            if day not in event_dict:
-                event_dict[day] = []
-            event_dict[day].append({
-                'subject': subject,
-                'start': start_time,
-                'end': end_time,
-                'location': location
-            })
+        if '(' in date_str and ')' in date_str:
+            base_date_str = date_str.split('(')[0].strip()
+            duration = int(date_str.split('(')[1].split(')')[0].strip())
+        else:
+            base_date_str = date_str
+            duration = 1  
+        try:
+            base_date = datetime.strptime(base_date_str, '%Y-%m-%d')
+        except ValueError:
+            continue
+        for i in range(duration):
+            event_date = base_date + timedelta(weeks=i)
+            if event_date.year == year and event_date.month == month:
+                day = event_date.day
+                if day not in event_dict:
+                    event_dict[day] = []
+                event_dict[day].append({
+                    'subject': subject,
+                    'start': start_time,
+                    'end': end_time,
+                    'location': location
+                })
 
     cal = calendar.HTMLCalendar(firstweekday=6)
     month_days = cal.itermonthdays(year, month)
@@ -423,6 +646,7 @@ def calander_index():
         if day == 0:
             calendar_html += '<td></td>'
         else:
+            is_today = (year == today[0] and month == today[1] and day == today[2])
             if day in event_dict:
                 events_html = ""
                 for e in event_dict[day]:
@@ -433,9 +657,11 @@ def calander_index():
                         f'<a>{e["location"]}</a>'
                         f'</div>'
                     )
-                calendar_html += f'<td class="event">{day}<br>{events_html}</td>'
+                class_name = "event today" if is_today else "event"
+                calendar_html += f'<td class="{class_name}">{day}<br>{events_html}</td>'
             else:
-                calendar_html += f'<td>{day}</td>'
+                class_name = "today" if is_today else ""
+                calendar_html += f'<td class="{class_name}">{day}</td>'
 
         week_day += 1
 
@@ -447,4 +673,3 @@ def calander_index():
 if __name__ == '__main__':
     insert_user('admin@mmu.edu.my', 'Admin@123!', 'AdminUser', role='admin')
     app.run(debug=True)
-    
